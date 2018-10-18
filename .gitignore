@@ -4,4 +4,6 @@ extra/
 # igor generated backup files
 *.ipfT*
 
+.svn/
+
 
