@@ -1,0 +1,7 @@
+# extra files
+extra/
+
+# igor generated backup files
+*.ipfT*
+
+
