@@ -5,5 +5,4 @@ extra/
 *.ipfT*
 
 .svn/
-
-
+.directory
