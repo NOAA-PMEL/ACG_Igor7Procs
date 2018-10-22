@@ -7806,7 +7806,7 @@ Function ccn_filter_on_types()
 		endif		
 	endfor
 	
-	string var_list = "CCN_Concentration_Cleaned;mono_cn_conc_shifted;CCN_CN_ratio_Cleaned;SS_setting"
+	string var_list = "CCN_Concentration_Cleaned;mono_cn_conc_shifted;CCN_CN_ratio_Cleaned;SS_setting;zi_smps_dp_ccn_mono"
 
 	
 	variable vari
