@@ -7785,3 +7785,60 @@ Function ccn_ttdma_load_valve()
 	//ttdma_update() //comment out if it is easier to do this manually
 	
 End
+
+Function ccn_filter_on_types()
+
+	string sdf = ccn_goto_ccn_folder()
+	
+	wave/T types = ccn_sample_type
+	
+	string typelist = ccn_samp_type_list
+	string mart_list = ""
+	string ss_list = ""
+	
+	variable i
+	for (i=0; i<itemsinlist(typelist); i+=1)
+		string typ = stringfromlist(i,typelist)
+		if (stringmatch(typ,"MART_*") > 0 || stringmatch(typ,"Mart_*") > 0)
+			mart_list=addlistitem(typ,mart_list,";",Inf)
+		elseif (stringmatch(typ,"SS_*") > 0)
+			ss_list=addlistitem(typ,ss_list,";",Inf)
+		endif		
+	endfor
+	
+	string var_list = "CCN_Concentration_Cleaned;mono_cn_conc_shifted;CCN_CN_ratio_Cleaned;SS_setting"
+
+	
+	variable vari
+	for (vari=0; vari<itemsinlist(var_list); vari+=1)
+		string var = stringfromlist(vari,var_list)
+		wave src = $var
+
+		newdatafolder/o/s $"exports"
+		newdatafolder/o/s $"MART"
+		duplicate/o src $var
+		wave w = $var
+		ccn_goto_ccn_folder()
+		
+		for (i=0; i<numpnts(types); i+=1)
+			if (whichlistitem(types[i],mart_list)<0)
+				w[i] = NaN
+			endif
+		endfor
+
+		newdatafolder/o/s $"exports"
+		newdatafolder/o/s $"SeaSweep"
+		duplicate/o src $var
+		wave w = $var
+		ccn_goto_ccn_folder()
+		
+		for (i=0; i<numpnts(types); i+=1)
+			if (whichlistitem(types[i],ss_list)<0)
+				w[i] = NaN
+			endif
+		endfor
+	endfor
+		
+			
+
+End
