@@ -11,16 +11,16 @@
 constant acg_utils_version=2.9
 // --- Changes from 2.8 to 2.9 --- 12 July 2018
 // 	- probably lots of unrecorded changes
-//	- added function to avg windD using time index 
+//	- added function to avg windD using time index
 // --- Changes from 2.7 to 2.8 --- 30 November 2010
 // 	- modified/fixed: loading multiple itx files from dchart
 //	- more I don't remember
 // --- Changes from 2.6 to 2.7 --- 04 June 2010
-//	- added wrapper functions to do rose plots 
+//	- added wrapper functions to do rose plots
 // --- Changes from 2.5 to 2.6 --- 19 May 2010
-//	- added dchart_itx data reader 
+//	- added dchart_itx data reader
 // --- Changes from 2.4 to 2.5 --- 8 May 2009
-//	- ??? modified TBM 
+//	- ??? modified TBM
 //		- removed some incomplete functions
 //		- resized entire panel to accomodate lower resolutions (for Tim)
 // --- Changes from 2.3 to 2.4 --- 8 May 2009
@@ -138,7 +138,7 @@ menu "ACG Data"
 //			"Set Project Info", set_project_info()
 		end
 		submenu "Load Data"
-			"Load DChart itx data file", load_data_dchart_itx_format() 
+			"Load DChart itx data file", load_data_dchart_itx_format()
 			"Load DataSelector data file", load_data_selector_format()
 			"Load and Average DataSelector data file", load_and_average(ACG_DS_FORMAT)
 			//"Load ACF data file", load_acf()
@@ -188,18 +188,18 @@ Function set_project_name(pname)
 	newdatafolder/o/s root:project_info
 
 	SVAR name = ProjectName
-	if (!SVAR_exists(name)) 
+	if (!SVAR_exists(name))
 		string/g ProjectName
 		name = ProjectName
 	endif
 	name = pname
-	
+
 	setdatafolder(sdf)
 End
 
 Function/S get_project_name()
 	SVAR name = root:project_info:ProjectName
-	if (!SVAR_exists(name)) 
+	if (!SVAR_exists(name))
 		return ""
 	endif
 	return name
@@ -211,12 +211,12 @@ Function set_project_starttime(stime)
 	newdatafolder/o/s root:project_info
 
 	SVAR start = StartTimeString
-	if (!SVAR_exists(start)) 
+	if (!SVAR_exists(start))
 		string/g StartTimeString
 		start = StartTimeString
 	endif
 	start = stime
-	
+
 	setdatafolder(sdf)
 End
 
@@ -227,11 +227,11 @@ Function get_project_starttime()
 		return -1
 	endif
 	variable yr, mo, day, hr, mn, sec
-	sscanf start, "%d-%d-%d %d:%d:%d", yr, mo, day, hr, mn, sec 
+	sscanf start, "%d-%d-%d %d:%d:%d", yr, mo, day, hr, mn, sec
 	stime = date2secs(yr,mo,day) + hr*60*60 + mn*60 + sec
 	// should do a sanity check here...is value within limits?
 	return stime
-	
+
 End
 
 Function set_project_stoptime(stime)
@@ -240,12 +240,12 @@ Function set_project_stoptime(stime)
 	newdatafolder/o/s root:project_info
 
 	SVAR stop = StopTimeString
-	if (!SVAR_exists(stop)) 
+	if (!SVAR_exists(stop))
 		string/g StopTimeString
 		stop = StopTimeString
 	endif
 	stop = stime
-	
+
 	setdatafolder(sdf)
 End
 
@@ -256,11 +256,11 @@ Function get_project_stoptime()
 		return -1
 	endif
 	variable yr, mo, day, hr, mn, sec
-	sscanf stop, "%d-%d-%d %d:%d:%d", yr, mo, day, hr, mn, sec 
+	sscanf stop, "%d-%d-%d %d:%d:%d", yr, mo, day, hr, mn, sec
 	stime = date2secs(yr,mo,day) + hr*60*60 + mn*60 + sec
 	// should do a sanity check here...is value within limits?
 	return stime
-	
+
 End
 
 
@@ -275,14 +275,14 @@ End
 
 // *** Path Functions *** //
 Function set_base_path()
-	
+
 	string sdf = getdatafolder(1)
 	NewDataFolder/O/S root:loaddata_tmp
-	
+
 	PathInfo loaddata_base_path
 	//print "first: ", S_path
 	String basepath = S_path
-	
+
 	if (cmpstr(basepath,"") == 0)
 		//print "basepath == 0"
 		NewPath/O/M="Select base path to Data" loaddata_base_path
@@ -290,10 +290,10 @@ Function set_base_path()
 
 	SetDataFolder sdf
 	KillDataFolder root:loaddata_tmp
-	
+
 	//String/G loaddata_base_path
 	//SVAR/Z pth = loaddata_base_path
-	
+
 	//if (SVAR_Exists(pth) != 1)
 	//print "set_base_path 5"
 	//	KillStrings/Z pth
@@ -309,7 +309,7 @@ Function set_base_path()
 	//print "set_base_path 6"
 	//SVAR pth = loaddata_base_path
 	//print pth
-	
+
 	//SetDataFolder sdf
 	//print "set_base_path 7"
 	//return pth
@@ -318,15 +318,15 @@ end
 Function change_base_path()
 	//string sdf = getdatafolder(1)
 	//NewDataFolder/O/S $global_folder
-	
+
 	//SVAR/Z pth = loaddata_base_path
 	//KillStrings/Z pth
 	//KillStrings/Z loaddata_base_path
 	//set_base_path()
-	
+
 	NewPath/O/M="Select base path to Data" loaddata_base_path
-	
-	
+
+
 	//SetDataFolder sdf
 end
 
@@ -339,21 +339,21 @@ Function load_and_average(data_format)
 	String sdf = getdatafolder(1)
 	newdatafolder/o/s $acg_tmp_dataload_folder
 	newdatafolder/o/s input
-	
+
 	if (data_format == ACG_DS_FORMAT) // DataSelector format
 		load_data_selector_format()
 	else
 		print "Unknown data format!"
 		return 0
 	endif
-	
+
 	acg_init_gui()
 	DoWindow/F LoadAvgPanel
 	if (V_Flag != 0)
 		return 0
 	endif
 	Execute "LoadAvgPanel()"
-	
+
 	//killdatafolder/Z $acg_tmp_dataload_folder
 End
 
@@ -373,14 +373,14 @@ Function acg_init_gui()
 		if (exists("last_timebase") != 2)
 			variable/G last_timebase = 300
 		elseif (exists("concat_do_avg_flag") != 2)
-			variable/G concat_do_avg_flag = 0	
-		endif	
+			variable/G concat_do_avg_flag = 0
+		endif
 	endif
 
 	newdatafolder/o $acg_toAverage_folder
 	newdatafolder/o $acg_toTimeBase_folder
 	newdatafolder/o $acg_toConcat_folder
-	
+
 	setdatafolder sdf
 End
 
@@ -389,7 +389,7 @@ Function load_data_selector_format()
 	set_base_path()
 	PathInfo loaddata_base_path
 	//print "base_path  = " S_path
-	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path 
+	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path
 End
 
 // for dataselector format during ICEALOT
@@ -397,7 +397,7 @@ Function load_data_selector_format_v2()
 	set_base_path()
 	PathInfo loaddata_base_path
 	//print "base_path  = " S_path
-//	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path 
+//	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path
 	LoadWave/J/D/A/W/O/K=0/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path
 End
 
@@ -407,7 +407,7 @@ Function load_data_labview_acf_format()
 	PathInfo loaddata_base_path
 
 	//print "base_path  = " S_path
-//	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path 
+//	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path
 //	LoadWave/J/D/A/W/O/K=0/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path
 	// Make sure the base path to the data file is set
 
@@ -418,12 +418,12 @@ Function load_data_labview_acf_format()
 	duplicate/o/t meta0, metadata
 	wave/t metadata
 	killwaves meta0
-	
+
 	// get filename and full path for use later
 	Variable nfiles = V_flag // # of files loaded...future use?
 	String filename = S_filename
 	String fullpath = S_path
-	
+
 	variable pts = numpnts(metadata)
 	print pts
 	variable ii
@@ -433,8 +433,8 @@ Function load_data_labview_acf_format()
 	make/o/t params
 	// if this isn't done 1st, timestamp screwed up
 	add_acf_timestamp_params(params, num_params)
-	for (ii=0; ii<pts; ii+=1)	
-		if (cmpstr(metadata[ii],"#PARAMETER#")==0) 
+	for (ii=0; ii<pts; ii+=1)
+		if (cmpstr(metadata[ii],"#PARAMETER#")==0)
 			num_params+=1
 			redimension/N=(num_params) params
 			params[num_params-1]=metadata[ii+1]
@@ -475,11 +475,11 @@ Function load_data_labview_acf_format()
 
 End
 
-Function load_data_dchart_itx_format() 
+Function load_data_dchart_itx_format()
 	set_base_path()
 	PathInfo loaddata_base_path
 	//print "base_path  = " S_path
-//	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path 
+//	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path
 
 	Variable refNum
 	String message = "Select one or more files"
@@ -489,7 +489,7 @@ Function load_data_dchart_itx_format()
 
 	Open /D /R /MULT=1 /F=fileFilters /M=message /P=loaddata_base_path refNum
 	outputPaths = S_fileName
-	
+
 	if (strlen(outputPaths) == 0)
 		Print "Cancelled"
 	else
@@ -497,7 +497,7 @@ Function load_data_dchart_itx_format()
 		Variable i
 		for(i=0; i<numFilesSelected; i+=1)
 			String path = StringFromList(i, outputPaths, "\r")
-			//Printf "%d: %s\r", i, path	
+			//Printf "%d: %s\r", i, path
 			LoadWave/T/O path
 		endfor
 	endif
@@ -510,7 +510,7 @@ Function load_data_selector_v2_byname(fileName)
 	set_base_path()
 	PathInfo loaddata_base_path
 	//print "base_path  = " S_path
-//	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path 
+//	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path
 	LoadWave/J/D/A/W/O/K=0/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path fileName
 End
 
@@ -519,7 +519,7 @@ Function load_data_selector_v2_bypath(path)
 //	set_base_path()
 //	PathInfo loaddata_base_path
 	//print "base_path  = " S_path
-//	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path 
+//	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path
 	LoadWave/J/D/A/W/O/K=0/R={English,2,2,2,2,"Year-Month-DayOfMonth",40} path
 End
 
@@ -555,7 +555,7 @@ Function add_acf_timestamp_params(p, num_p)
 		jj += 1
 		stamp = StringFromList(jj,acf_timestamp," ")
 	while(1)
-	
+
 end
 
 Function load_acf()
@@ -564,7 +564,7 @@ Function load_acf()
 	NewDataFolder/O/S root:ACF
 
 	//set_base_path()
-	
+
 	// Make sure the base path to the data file is set
 	set_base_path()
 	PathInfo loaddata_base_path
@@ -575,12 +575,12 @@ Function load_acf()
 	duplicate/o/t meta0, metadata
 	wave/t metadata
 	killwaves meta0
-	
+
 	// get filename and full path for use later
 	Variable nfiles = V_flag // # of files loaded...future use?
 	String filename = S_filename
 	String fullpath = S_path
-	
+
 	variable pts = numpnts(metadata)
 	print pts
 	variable ii
@@ -590,8 +590,8 @@ Function load_acf()
 	make/o/t params
 	// if this isn't done 1st, timestamp screwed up
 	add_acf_timestamp_params(params, num_params)
-	for (ii=0; ii<pts; ii+=1)	
-//		if (cmpstr(metadata[ii],"#TIME PARAMETERS#")==0) 
+	for (ii=0; ii<pts; ii+=1)
+//		if (cmpstr(metadata[ii],"#TIME PARAMETERS#")==0)
 //			variable jj=0
 //			do
 //				string stamp = StringFromList(jj,metadata[ii+1]," ")
@@ -606,7 +606,7 @@ Function load_acf()
 //				stamp = StringFromList(jj,metadata[ii+1]," ")
 //			while(1)
 //		endif
-		if (cmpstr(metadata[ii],"#PARAMETER#")==0) 
+		if (cmpstr(metadata[ii],"#PARAMETER#")==0)
 			num_params+=1
 			redimension/N=(num_params) params
 			params[num_params-1]=metadata[ii+1]
@@ -643,15 +643,15 @@ Function load_acf()
 	wave isodate
 	wave year,month,day,hour,minute,second
 	isodate = date2secs(year,month,day) + (hour*3600) + (minute*60) + (second)
-	
-		
-	SetDataFolder sdf	
+
+
+	SetDataFolder sdf
 
 end
 
 Function acg_get_year(dt_in)
 	variable dt_in
-	
+
 	string date_str = secs2date(dt_in,0)
 	variable val 	= str2num(stringfromlist(2,date_str,"/"))
 
@@ -660,7 +660,7 @@ end
 
 Function acg_get_month(dt_in)
 	variable dt_in
-	
+
 	string date_str = secs2date(dt_in,0)
 	variable val 	= str2num(stringfromlist(0,date_str,"/"))
 
@@ -669,7 +669,7 @@ end
 
 Function acg_get_day(dt_in)
 	variable dt_in
-	
+
 	string date_str = secs2date(dt_in,0)
 	variable val 	= str2num(stringfromlist(1,date_str,"/"))
 
@@ -678,7 +678,7 @@ end
 
 Function acg_get_hour(dt_in)
 	variable dt_in
-	
+
 	string time_str = secs2time(dt_in,3)
 	variable val	= str2num(stringfromlist(0,time_str,":"))
 
@@ -687,7 +687,7 @@ end
 
 Function acg_get_minute(dt_in)
 	variable dt_in
-	
+
 	string time_str = secs2time(dt_in,3)
 	variable val	= str2num(stringfromlist(1,time_str,":"))
 
@@ -696,7 +696,7 @@ end
 
 Function acg_get_second(dt_in)
 	variable dt_in
-	
+
 	string time_str = secs2time(dt_in,3)
 	variable val	= str2num(stringfromlist(2,time_str,":"))
 
@@ -709,35 +709,35 @@ Function doy2datetime(year_in, doy_in)
 	variable doy_in // input decimal doy (dayofyear.fractofday)
 	variable year_in // year needed for complete time string
 	variable dt_out  // returned datetime in igor format (seconds)
-	
+
 	// get the year and day
 	dt_out = date2secs(year_in,1,1)
 	dt_out += (floor(doy_in)-1) * 24 * 60 * 60
-	
+
 	// now do the fraction
 	variable fract = doy_in - floor(doy_in)
 	dt_out += fract * 24 * 60 * 60
-	
+
 	return dt_out
-	
+
 End
-	
+
 Function datetime2doy(dt_in)
 	variable dt_in // input datetime (in seconds)
 	variable doy_out // returned doy.fract
-	
+
 	// get date values
 	string date_str = secs2date(dt_in,0)
 	variable mo 	= str2num(stringfromlist(0,date_str,"/"))
 	variable day  	= str2num(stringfromlist(1,date_str,"/"))
 	variable yr 	= str2num(stringfromlist(2,date_str,"/"))
-	
+
 	// get time values
 	string time_str = secs2time(dt_in,3)
 	variable hr	= str2num(stringfromlist(0,time_str,":"))
 	variable mn	= str2num(stringfromlist(1,time_str,":"))
 	variable sec	= str2num(stringfromlist(2,time_str,":"))
-	
+
 	// need to get Julian day of desired year
 	variable offset = dateToJulian(yr,1,1) - 1
 
@@ -746,18 +746,18 @@ Function datetime2doy(dt_in)
 	doy_out += hr/24
 	doy_out += mn/24/60
 	doy_out += sec/24/60/60
-	
+
 	return doy_out
-	 
+
 End
 
 Function doy2datetime_wave(year, doy, dt_name)
 	wave year, doy
 	string dt_name
-	
+
 	duplicate/o doy $dt_name
 	wave dt = $dt_name
-	
+
 	variable i
 	for (i=0; i<numpnts(doy); i+=1)
 		dt[i] = doy2datetime(year[i], doy[i])
@@ -767,10 +767,10 @@ End
 Function datetime2doy_wave(dt, doy_name)
 	wave dt
 	string doy_name
-	
+
 	duplicate/o dt $doy_name
 	wave doy = $doy_name
-	
+
 	variable i
 	for (i=0; i<numpnts(dt); i+=1)
 		doy[i] = datetime2doy(dt[i])
@@ -781,7 +781,7 @@ Function get_timebase_index_FindValue(common, sparse, tol, index_name)
 	wave common, sparse
 	variable tol
 	string index_name
-	
+
 	// do time base once because it takes awhile
 	print "ACG Utils: creating time index for constant time base (may take awhile)..."
 	duplicate/o  sparse $index_name
@@ -802,7 +802,7 @@ Function get_timebase_index(common, sparse, tol, index_name)
 	wave common, sparse
 	variable tol
 	string index_name
-	
+
 	// do time base once because it takes awhile
 	print "ACG Utils: creating time index for constant time base (may take awhile)..."
 	duplicate/o  sparse $index_name
@@ -844,8 +844,8 @@ Function DFolder_PopMenuProc(ctrlName,popNum,popStr) : PopupMenuControl
 	Variable popNum
 	String popStr
 	NVAR index = root:gui:load_datafolder_index
-	
-	if (cmpstr(popStr,"<new data folder>") == 0) 
+
+	if (cmpstr(popStr,"<new data folder>") == 0)
 		// show window for user input
 		String foldername
 		Prompt foldername, "Enter new datafolder name: "
@@ -862,7 +862,7 @@ Function DFolder_PopMenuProc(ctrlName,popNum,popStr) : PopupMenuControl
 		//variable/G acg_timebase
 	endif
 	// set current datafolder index value
-	
+
 End
 
 
@@ -872,12 +872,12 @@ Function AvgPer_SetVarProc(ctrlName,varNum,varStr,varName) : SetVariableControl
 	String varStr
 	String varName
 
-	
+
 End
 
 Function LoadAvg_ButtonProc(ctrlName) : ButtonControl
 	String ctrlName
-	
+
 	if (cmpstr(ctrlName,"go_button") == 0)
 		// do the avg
 		acg_check_avgtime()
@@ -893,25 +893,25 @@ Function LoadAvg_ButtonProc(ctrlName) : ButtonControl
 End
 
 Function acg_check_avgtime()
-	
-	// some quick housekeeping to make sure new data is averaged at 
-	//    correct avgtime 
+
+	// some quick housekeeping to make sure new data is averaged at
+	//    correct avgtime
 	SVAR dflist = root:gui:load_datafolder_list
 	NVAR index = root:gui:load_datafolder_index
 	NVAR avgtime = root:gui:datafolder_list
-	
+
 	if (datafolderexists("root:"+stringfromlist(index,"dflist")))
 		NVAR/Z ds_avgtime = $("root:"+stringfromlist(index,"dflist")+":dataset_avgtime")
 		if (ds_avgtime != avgtime)
 			avgtime = ds_avgtime
 		endif
-	endif	
+	endif
 
 End
 
 Function acg_concat_loaded_data()
 	String sdf = getdatafolder(1)
-	
+
 	SVAR folderlist = root:gui:load_datafolder_list
 	NVAR findex = root:gui:load_datafolder_index
 	NVAR avgtime = root:gui:last_avgtime
@@ -924,14 +924,14 @@ Function acg_concat_loaded_data()
 	endif
 	setdatafolder acg_tmp_dataload_folder
 	string wlist = acg_get_wlist_from_folder(":input")
-	
+
 	// handle the times
 	wave avg_dt = avg_tw
-	if (isNew) 
+	if (isNew)
 		duplicate avg_dt $(dfolder+":date_time")
 	else
 		duplicate/o $(dfolder+":date_time") $(dfolder+":date_time_bak")
-		wave old_dt = $(dfolder+":date_time_bak")		
+		wave old_dt = $(dfolder+":date_time_bak")
 		wavestats/Q avg_dt
 		variable newmin = V_min
 		variable newmax = V_max
@@ -940,21 +940,21 @@ Function acg_concat_loaded_data()
 		variable oldmax = V_max
 		variable mintime = (newmin<oldmin) ? newmin : oldmin
 		variable maxtime = (newmax>oldmax) ? newmax : oldmax
-		
+
 		variable npts = ((maxtime-mintime)/avgtime) + 1
 		make/o/n=(npts)/d $(dfolder+":date_time")
 		wave dt = $(dfolder+":date_time")
 		dt[0] = mintime
 		dt[1,] = dt[p-1]+avgtime
-		
+
 		// create doy wave for ease
 		datetime2doy_wave(dt,dfolder+":doy")
 	endif
-	
+
 	String lname
 	variable i
 	wave dt = $(dfolder+":date_time")
-	wave old_dt = $(dfolder+":date_time_bak")		
+	wave old_dt = $(dfolder+":date_time_bak")
 	for (i=0; i<itemsinlist(wlist); i+=1)
 		String wname = stringfromlist(i,wlist)
 		if ( (cmpstr(wname,"Start_DateTime") == 0) || (cmpstr(wname,"AvePeriod") ==0)  || (cmpstr(wname,"DOY")==0) )
@@ -982,8 +982,8 @@ Function acg_concat_loaded_data()
 				param[starti,starti+numpnts(new_param)] = new_param[p-starti]
 			endif
 		endif
-	endfor				
-	
+	endfor
+
 	setdatafolder sdf
 End
 
@@ -1009,18 +1009,18 @@ Function/S acg_map2newname(varname)
 		return varname
 	endif
 End
-		
-		
+
+
 Function/S acg_get_wlist_from_folder(dfolder, [filter_str])
 	string dfolder
 	// optional: must specify with filter_str="some string"
 	string filter_str
-	
+
 	variable use_filter = 1
 	if (numtype(strlen(filter_str))==2 || strlen(filter_str)==0)
 		use_filter = 0
 	endif
-	
+
 	string sdf = getdatafolder(1)
 	setdatafolder dfolder
 	string list = ""
@@ -1029,7 +1029,7 @@ Function/S acg_get_wlist_from_folder(dfolder, [filter_str])
 	else
 		list = acg_get_wave_list()
 	endif
-	
+
 	setdatafolder sdf
 	return list
 End
@@ -1042,7 +1042,7 @@ Function/S acg_get_wave_list([filter])
 	if (numtype(strlen(filter))==2 || strlen(filter)==0)
 		use_filter = 0
 	endif
-	
+
 	String list=""
 	String w
 	variable index = 0
@@ -1057,7 +1057,7 @@ Function/S acg_get_wave_list([filter])
 			endif
 		else
 			list += w + ";"
-		endif				
+		endif
 		index += 1
 	while(1)
 	return list
@@ -1067,8 +1067,8 @@ Function acg_average_loaded_data()
 	String sdf = getdatafolder(1)
 	setdatafolder $(acg_tmp_dataload_folder+":input")
 	string list = acg_get_wave_list()
-	setdatafolder acg_tmp_dataload_folder	
-	
+	setdatafolder acg_tmp_dataload_folder
+
 	wave ds_tw = $(":input:Start_DateTime")
 
 	// get timebase limits
@@ -1129,8 +1129,8 @@ Function acg_average_loaded_data()
 			w[j] = V_avg
 		endfor
 	endfor
-	
-	
+
+
 
 
 End
@@ -1140,7 +1140,7 @@ Function/S acg_getdatafolder_list()
 	print list
 	return list
 End
-	
+
 Window LoadAvgPanel() : Panel
 	PauseUpdate; Silent 1		// building window...
 	NewPanel /W=(150,77,450,277) as "Load & Average"
@@ -1166,7 +1166,7 @@ Function/S get_wavelist(dfolder)
 		if (strlen(wname) == 0)
 			break
 		endif
-			
+
 		//Print wname
 		wlist += wname + ";"
 		index += 1
@@ -1186,7 +1186,7 @@ Function/S get_dfr_list(dfr)
 		if (strlen(dfrname) == 0)
 			break
 		endif
-			
+
 		//Print wname
 		dfrlist += dfrname + ";"
 		index += 1
@@ -1194,8 +1194,8 @@ Function/S get_dfr_list(dfr)
 	//print wlist, itemsinlist(wlist)
 	return SortList(dfrlist)
 End
-	
-	
+
+
 End
 
 Function PopMenuProc(ctrlName,popNum,popStr) : PopupMenuControl
@@ -1206,10 +1206,10 @@ Function PopMenuProc(ctrlName,popNum,popStr) : PopupMenuControl
 
 	string sdf = getdatafolder(1)
 	setdatafolder $acg_toAverage_folder
-	
+
 	NVAR index = datetime_index
 	index = popNum - 1
-		
+
 	setdatafolder sdf
 
 End
@@ -1217,9 +1217,9 @@ End
 Function/S acg_get_toAverage_list()
 	string sdf = getdatafolder(1)
 	setdatafolder $acg_toAverage_folder
-	
+
 	string list = wavelist("*",";","")
-	
+
 	setdatafolder sdf
 
 	return list
@@ -1228,9 +1228,9 @@ End
 Function/S acg_get_toTimeBase_list()
 	string sdf = getdatafolder(1)
 	setdatafolder $acg_toTimeBase_folder
-	
+
 	string list = wavelist("*",";","")
-	
+
 	setdatafolder sdf
 
 	return list
@@ -1239,9 +1239,9 @@ End
 Function/S acg_get_toConcat_list()
 	string sdf = getdatafolder(1)
 	setdatafolder $acg_toConcat_folder
-	
+
 	string list = wavelist("*",";","")
-	
+
 	setdatafolder sdf
 
 	return list
@@ -1252,7 +1252,7 @@ Window DateTimeSelPanel() : Panel
 	setdatafolder $acg_toAverage_folder
 	variable/G datetime_index = 0
 	setdatafolder sdf
-	
+
 	PauseUpdate; Silent 1		// building window...
 	NewPanel /W=(364,155,664,355) as "DateTime Selector"
 	SetDrawLayer UserBack
@@ -1267,18 +1267,18 @@ Function toAverage_ButtonProc(ctrlName) : ButtonControl
 	String ctrlName
 
 	if (cmpstr(ctrlName,"doneButton") == 0)
-		
+
 		// copy data to acg_tmp_datafolder
 		string sdf = getdatafolder(1)
 		setdatafolder $acg_toAverage_folder
-		
+
 		NVAR index = datetime_index
 		string list = acg_get_toAverage_list()
 		newdatafolder/o/s $acg_tmp_dataload_folder
 		newdatafolder/o/s input
 		variable i
 		for (i=0; i<itemsinlist(list); i+=1)
-			wave param = $(acg_toAverage_folder+":"+stringfromlist(i,list)) 
+			wave param = $(acg_toAverage_folder+":"+stringfromlist(i,list))
 			if (i == index) // date_time wave
 				duplicate/o param Start_DateTime
 			else
@@ -1286,13 +1286,13 @@ Function toAverage_ButtonProc(ctrlName) : ButtonControl
 				duplicate/o param $name
 			endif
 		endfor
-		
+
 		// exit
 	elseif (cmpstr(ctrlName,"cancelButton") == 0)
 		print "cancelled"
 	endif
 	killwindow DateTimeSelPanel
-	
+
 End
 
 Function toAverage_PopMenuProc(ctrlName,popNum,popStr) : PopupMenuControl
@@ -1303,10 +1303,10 @@ Function toAverage_PopMenuProc(ctrlName,popNum,popStr) : PopupMenuControl
 
 	string sdf = getdatafolder(1)
 	setdatafolder $acg_toAverage_folder
-	
+
 	NVAR index = datetime_index
 	index = popNum - 1
-		
+
 	setdatafolder sdf
 
 End
@@ -1321,7 +1321,7 @@ function acg_average_loaded_waves()
 	endif
 	Execute "DateTimeSelPanel()"
 	PauseForUser DateTimeSelPanel
-	
+
 	DoWindow/F LoadAvgPanel
 	if (V_Flag != 0)
 		return 0
@@ -1333,13 +1333,13 @@ end
 
 // ----
 
-// For same TimeBase 
+// For same TimeBase
 Window DateTimeSelPanel_TB() : Panel
 	string sdf = getdatafolder(1)
 	setdatafolder $acg_toTimeBase_folder
 	variable/G datetime_index = 0
 	setdatafolder sdf
-	
+
 	PauseUpdate; Silent 1		// building window...
 	NewPanel /W=(364,155,664,355) as "DateTime Selector"
 	SetDrawLayer UserBack
@@ -1354,19 +1354,19 @@ Function toTimeBase_ButtonProc(ctrlName) : ButtonControl
 	String ctrlName
 
 	if (cmpstr(ctrlName,"doneButton") == 0)
-		
+
 		// copy data to acg_tmp_datafolder
 		string sdf = getdatafolder(1)
 		setdatafolder $acg_toTimeBase_folder
-		
+
 		NVAR index = datetime_index
 		string list = acg_get_toTimeBase_list()
-		
+
 		newdatafolder/o/s $acg_tmp_timebase_folder
 		newdatafolder/o/s input
 		variable i
 		for (i=0; i<itemsinlist(list); i+=1)
-			wave param = $(acg_toTimeBase_folder+":"+stringfromlist(i,list)) 
+			wave param = $(acg_toTimeBase_folder+":"+stringfromlist(i,list))
 			if (i == index) // date_time wave
 				duplicate/o param Start_DateTime
 			else
@@ -1374,13 +1374,13 @@ Function toTimeBase_ButtonProc(ctrlName) : ButtonControl
 				duplicate/o param $name
 			endif
 		endfor
-				
+
 		// exit
 	elseif (cmpstr(ctrlName,"cancelButton") == 0)
 		print "cancelled"
 	endif
 	killwindow DateTimeSelPanel_TB
-	
+
 End
 
 Function toTimeBase_PopMenuProc(ctrlName,popNum,popStr) : PopupMenuControl
@@ -1391,10 +1391,10 @@ Function toTimeBase_PopMenuProc(ctrlName,popNum,popStr) : PopupMenuControl
 
 	string sdf = getdatafolder(1)
 	setdatafolder $acg_toTimeBase_folder
-	
+
 	NVAR index = datetime_index
 	index = popNum - 1
-		
+
 	setdatafolder sdf
 
 End
@@ -1410,7 +1410,7 @@ function acg_set_timebase_loaded_waves()
 	Execute "DateTimeSelPanel_TB()"
 	PauseForUser DateTimeSelPanel_TB
 
-	//Variable tb 
+	//Variable tb
 	//Prompt tb,"enter timebase (in seconds)"
 	//DoPrompt "Enter timebase", tb
 	DoWindow/F LoadTimeBasePanel
@@ -1419,7 +1419,7 @@ function acg_set_timebase_loaded_waves()
 	endif
 	Execute "LoadTimeBasePanel()"
 
-	
+
 end
 
 Window LoadTimeBasePanel() : Panel
@@ -1442,12 +1442,12 @@ Function TimeBase_SetVarProc(ctrlName,varNum,varStr,varName) : SetVariableContro
 	String varStr
 	String varName
 
-	
+
 End
 
 Function TimeBase_ButtonProc(ctrlName) : ButtonControl
 	String ctrlName
-	
+
 	if (cmpstr(ctrlName,"go_button") == 0)
 		// do the avg
 		//acg_check_avgtime()
@@ -1468,13 +1468,13 @@ Function acg_common_timebase_data(moveWaves)
 	String sdf = getdatafolder(1)
 	setdatafolder $(acg_tmp_timebase_folder+":input")
 	string list = acg_get_wave_list()
-	setdatafolder acg_tmp_timebase_folder	
-	
+	setdatafolder acg_tmp_timebase_folder
+
 	wave ds_tw = $(":input:Start_DateTime")
-	
+
 	nvar tb = root:gui:last_timebase
 
-	// --- Change here --- 
+	// --- Change here ---
 
 	// get timebase limits
 	wavestats/Q ds_tw
@@ -1499,16 +1499,16 @@ Function acg_common_timebase_data(moveWaves)
 	svar dfolder_list = root:gui:load_datafolder_list
 //	string destFolder = "root:"+stringfromlist(dfindex,dfolder_list)
 	string destFolder
-	
-	if (moveWaves) 
+
+	if (moveWaves)
 		//destFolder = "root:"+stringfromlist(dfindex,dfolder_list)
 		destFolder = acg_get_destFolder_from_list(dfindex)
-				
+
 		//newdatafolder/o $(destFolder)
 		acg_create_destFolder(destFolder)
 		duplicate/o common_tw $(destFolder+":date_time")
 	endif
-	
+
 	variable i,j
 	for (i=0; i<itemsinlist(list); i+=1)
 		string var = stringfromlist(i,list)
@@ -1523,14 +1523,14 @@ Function acg_common_timebase_data(moveWaves)
 	//			w[index] = v[j]
 				w[round(x2pnt(w,ds_tw[j]))] = v[j]
 			endfor
-			if (moveWaves) 
+			if (moveWaves)
 				duplicate/o w $(destFolder+":"+var)
 			endif
 		endif
 	endfor
 	if (moveWaves)
 		killdatafolder/Z $(acg_tmp_timebase_folder)
-	endif	
+	endif
 	setdatafolder sdf
 end
 
@@ -1550,7 +1550,7 @@ function acg_concat_loaded_waves()
 		return 0
 	endif
 	Execute "LoadConcatPanel()"
-	
+
 end
 
 Window LoadConcatPanel() : Panel
@@ -1571,13 +1571,13 @@ Window LoadConcatPanel() : Panel
 	CheckBox concat_doAvg,value=root:gui:concat_do_avg_flag
 EndMacro
 
-// For same TimeBase 
+// For same TimeBase
 Window DateTimeSelPanel_Concat() : Panel
 	string sdf = getdatafolder(1)
 	setdatafolder $acg_toConcat_folder
 	variable/G datetime_index = 0
 	setdatafolder sdf
-	
+
 	PauseUpdate; Silent 1		// building window...
 	NewPanel /W=(364,155,664,355) as "DateTime Selector"
 	SetDrawLayer UserBack
@@ -1592,20 +1592,20 @@ Function toConcat_ButtonProc(ctrlName) : ButtonControl
 	String ctrlName
 
 	if (cmpstr(ctrlName,"doneButton") == 0)
-		
+
 
 		// copy data to acg_tmp_datafolder
 		string sdf = getdatafolder(1)
 		setdatafolder $acg_toConcat_folder
-		
+
 		NVAR index = datetime_index
 		string list = acg_get_toConcat_list()
-		
+
 		newdatafolder/o/s $acg_tmp_concat_folder
 		newdatafolder/o/s input
 		variable i
 		for (i=0; i<itemsinlist(list); i+=1)
-			wave param = $(acg_toConcat_folder+":"+stringfromlist(i,list)) 
+			wave param = $(acg_toConcat_folder+":"+stringfromlist(i,list))
 			if (i == index) // date_time wave
 				duplicate/o param Start_DateTime
 			else
@@ -1613,13 +1613,13 @@ Function toConcat_ButtonProc(ctrlName) : ButtonControl
 				duplicate/o param $name
 			endif
 		endfor
-				
+
 		 //exit
 	elseif (cmpstr(ctrlName,"cancelButton") == 0)
 		print "cancelled"
 	endif
 	killwindow DateTimeSelPanel_Concat
-	
+
 End
 
 Function toConcat_PopMenuProc(ctrlName,popNum,popStr) : PopupMenuControl
@@ -1630,10 +1630,10 @@ Function toConcat_PopMenuProc(ctrlName,popNum,popStr) : PopupMenuControl
 
 	string sdf = getdatafolder(1)
 	setdatafolder $acg_toConcat_folder
-	
+
 	NVAR index = datetime_index
 	index = popNum - 1
-		
+
 	setdatafolder sdf
 
 End
@@ -1644,7 +1644,7 @@ Function Concat_SetVarProc(ctrlName,varNum,varStr,varName) : SetVariableControl
 	String varStr
 	String varName
 
-	
+
 End
 
 Function Concat_CheckProc(cba) : CheckBoxControl
@@ -1664,7 +1664,7 @@ End
 
 Function Concat_ButtonProc(ctrlName) : ButtonControl
 	String ctrlName
-	
+
 	if (cmpstr(ctrlName,"go_button") == 0)
 		// do the avg
 		//acg_check_avgtime()
@@ -1683,7 +1683,7 @@ End
 
 // put new waves on correct timebase and concat with user supplied waves
 Function acg_same_tb_concat_loaded_waves()
-	
+
 	string sdf = getdatafolder(1)
 	variable i,j,k
 
@@ -1703,15 +1703,15 @@ Function acg_same_tb_concat_loaded_waves()
 //	NVAR tb_index = $(acg_tmp_timebase_folder+":input:datetime_index")
 //	NVAR concat_index = datetime_index
 //	tb_index = concat_index
-	
+
 	// determine the proper timebase to use
-	NVAR tb = root:gui:last_timebase	
+	NVAR tb = root:gui:last_timebase
 	nvar dfIndex = root:gui:load_datafolder_index
 	svar dfolder_list = root:gui:load_datafolder_list
-	
+
 	//string destFolder = stringfromlist(dfindex,dfolder_list)
 	string destFolder = acg_get_destFolder_from_list(dfindex)
-	
+
 	if (exists(destFolder+":dataset_timebase") == 2)
 		NVAR ds_tb = $(destFolder+":dataset_timebase")
 		tb = ds_tb
@@ -1728,20 +1728,20 @@ Function acg_same_tb_concat_loaded_waves()
 	//string tmp_list = acg_tmp_concat_folder
 	string tmp_list = "acg_tmp_concat"
 	dfolder_list = tmp_list
-	acg_common_timebase_data(1)	
+	acg_common_timebase_data(1)
 
-	// reset the gui variables	
+	// reset the gui variables
 	dfIndex = bak_index
 	dfolder_list = bak_list
 
 	// do standard tricks to add new data to old (keep new data at overlap)
 	acg_concat_waves(acg_tmp_concat_folder, destFolder, tb)
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+
 //	string sdf = getdatafolder(1)
 //	setdatafolder acg_toConcat_folder
 //
@@ -1756,14 +1756,14 @@ Function acg_same_tb_concat_loaded_waves()
 //	variable new_cnt = itemsinlist(new_wlist)
 //	for (i=0; i<new_cnt; i+=1)
 //		string new_wname = stringfromlist(i,new_wlist)
-//		wave new_w = $new_wname 
+//		wave new_w = $new_wname
 //		variable old_index = whichlistitem(new_wname,old_wlist)
 //		if (old_index != -1)
 //			wave old_w = $(destFolder + ":" + stringfromlist(old_index,old_wlist))
 //			concatenate/o/np {old_w,new_w}, cat_w
 //			// I need a time wave first...otherwise I can't clean this up
 //		endif
-//	endfor 
+//	endfor
 
 	setdatafolder sdf
 End
@@ -1772,7 +1772,7 @@ Function acg_concat_waves(srcFolder, destFolder, tb)
 	string srcFolder, destFolder
 	variable tb // timebase
 	String sdf = getdatafolder(1)
-	
+
 //	SVAR folderlist = root:gui:load_datafolder_list
 //	NVAR findex = root:gui:load_datafolder_index
 //	NVAR avgtime = root:gui:last_avgtime
@@ -1787,14 +1787,14 @@ Function acg_concat_waves(srcFolder, destFolder, tb)
 	endif
 	setdatafolder srcFolder
 	string wlist = acg_get_wave_list()
-	
+
 	// handle the times
 	wave new_dt = date_time
-	if (isNew) 		
+	if (isNew)
 		duplicate new_dt $(destFolder+":date_time")
 	else
 		duplicate/o $(destFolder+":date_time") $(destFolder+":date_time_bak")
-		wave old_dt = $(destFolder+":date_time_bak")		
+		wave old_dt = $(destFolder+":date_time_bak")
 		wavestats/Q new_dt
 		variable newmin = V_min
 		variable newmax = V_max
@@ -1803,21 +1803,21 @@ Function acg_concat_waves(srcFolder, destFolder, tb)
 		variable oldmax = V_max
 		variable mintime = (newmin<oldmin) ? newmin : oldmin
 		variable maxtime = (newmax>oldmax) ? newmax : oldmax
-		
+
 		variable npts = ((maxtime-mintime)/tb) + 1
 		make/o/n=(npts)/d $(destFolder+":date_time")
 		wave dt = $(destFolder+":date_time")
 		dt[0] = mintime
 		dt[1,] = dt[p-1]+tb
-		
+
 		// create doy wave for ease
 		datetime2doy_wave(dt,destFolder+":doy")
 	endif
-	
+
 	String lname
 	variable i
 	wave dt = $(destFolder+":date_time")
-	wave old_dt = $(destFolder+":date_time_bak")		
+	wave old_dt = $(destFolder+":date_time_bak")
 	for (i=0; i<itemsinlist(wlist); i+=1)
 		String wname = stringfromlist(i,wlist)
 		if ( (cmpstr(wname,"Start_DateTime") == 0) || (cmpstr(wname,"date_time") ==0)  || (cmpstr(wname,"AvePeriod") ==0)  || (cmpstr(wname,"DOY")==0) )
@@ -1845,8 +1845,8 @@ Function acg_concat_waves(srcFolder, destFolder, tb)
 				param[starti,starti+numpnts(new_param)] = new_param[p-starti]
 			endif
 		endif
-	endfor				
-	
+	endfor
+
 	setdatafolder sdf
 End
 
@@ -1855,19 +1855,19 @@ Function acg_adjust_wave_to_datetime(start_dt, stop_dt, tb, dt_w, data_w, newdt_
 	variable start_dt, stop_dt, tb
 	wave dt_w, data_w
 	string newdt_name, newdata_name
-	
-	//create new time wave 	
+
+	//create new time wave
 	variable pnts = (stop_dt - start_dt) / tb + 1
 	make/D/o/n=(pnts) $newdt_name
 	wave newdt = $newdt_name
 	newdt[0] = start_dt
 	newdt[1,] = newdt[p-1] + tb
-	
+
 	duplicate/o newdt $newdata_name
 	wave newdata = $newdata_name
 	newdata = NaN
 	SetScale/P x newdt[0],tb,"dat", newdata
-	
+
 	variable starti,index
 	index=0
 	do
@@ -1877,8 +1877,8 @@ Function acg_adjust_wave_to_datetime(start_dt, stop_dt, tb, dt_w, data_w, newdt_
 	variable totalpnts
 	totalpnts = ( (pnts-1) > (starti+numpnts(data_w)) ) ?  numpnts(data_w) : (pnts-starti-1)
 	newdata[starti,starti+totalpnts] = data_w[p-starti]
-	
-	
+
+
 End
 
 // acg_expand_wave_to_tb
@@ -1902,16 +1902,16 @@ Function acg_expand_wave_to_tb(start_dt, stop_dt, old_tb, new_tb, dt_w, data_w, 
 	wave dt_w, data_w
 	string newdt_name, newdata_name
 	variable expansion_type
-	
+
 	variable tb_offset = floor(old_tb/new_tb) - 1
-	
-	//create new time wave 	
+
+	//create new time wave
 	variable pnts = (stop_dt - start_dt) / new_tb + 1
 	make/o/d/n=(pnts) $newdt_name
 	wave newdt = $newdt_name
 	newdt[0] = start_dt
 	newdt[1,] = newdt[p-1] + new_tb
-	
+
 	// change this to allow for 2D data
 //	duplicate/o newdt $newdata_name
 	duplicate/o data_w $newdata_name
@@ -1924,42 +1924,42 @@ Function acg_expand_wave_to_tb(start_dt, stop_dt, old_tb, new_tb, dt_w, data_w, 
 	else
 		redimension/N=(numpnts(newdt)) newdata
 	endif
-	
+
 	SetScale/P x newdt[0],new_tb,"dat", newdata
-	
+
 	variable starti,index
 //	index=0
 //	do
 //		starti = x2pnt(newdata,dt_w[index])
 //		index += 1
 //	while ( ((starti < 0) || (starti > pnts-1)) && (index < pnts) )
-	
+
 	if (is2d)
 		for (index=0; index<numpnts(dt_w); index+=1)
 			starti = x2pnt(newdata,dt_w[index])
 			if ( (starti>0) && (starti<numpnts(newdata)) )
-				if (expansion_type == 0) 
+				if (expansion_type == 0)
 					//if (starti+tb_offset > numpnts(newdata)-1)
 					if (starti+tb_offset > dimsize(newdata,0)-1)
 						newdata[starti,] = data_w[index][q]
 					else
 						newdata[starti,starti+tb_offset] = data_w[index][q]
-					endif			
+					endif
 				endif
 			endif
 		endfor
-	
+
 	else
-	
+
 		for (index=0; index<numpnts(dt_w); index+=1)
 			starti = x2pnt(newdata,dt_w[index])
 			if ( (starti>0) && (starti<numpnts(newdata)) )
-				if (expansion_type == 0) 
+				if (expansion_type == 0)
 					if (starti+tb_offset > numpnts(newdata)-1)
 						newdata[starti,] = data_w[index]
 					else
 						newdata[starti,starti+tb_offset] = data_w[index]
-					endif			
+					endif
 				endif
 			endif
 		endfor
@@ -1967,8 +1967,8 @@ Function acg_expand_wave_to_tb(start_dt, stop_dt, old_tb, new_tb, dt_w, data_w, 
 //	variable totalpnts
 //	totalpnts = ( (pnts-1) > (starti+numpnts(data_w)) ) ?  numpnts(data_w) : (pnts-starti-1)
 //	newdata[starti,starti+totalpnts] = data_w[p-starti]
-	
-	
+
+
 End
 
 
@@ -1993,7 +1993,7 @@ Function acg_expand_startstop2startstop(slow_start_dt, slow_stop_dt, slow_dat, f
 	wave fast_stop_dt
 	string newdata_name
 	variable expansion_type
-	
+
 	make/o/n=(numpnts(fast_start_dt))/d $(newdata_name) //, testi_start, testi_stop
 	//make/o/n=(numpnts(slow_start_dt))/d testi_start, testi_stop
 	wave fast_dat = $(newdata_name)
@@ -2002,26 +2002,26 @@ Function acg_expand_startstop2startstop(slow_start_dt, slow_stop_dt, slow_dat, f
 	fast_dat = NaN
 	//pnt_start = NaN
 	//pnt_stop = NaN
-	
+
 	variable i, starti, stopi
 	for (i=0; i<numpnts(slow_start_dt); i+=1)
 //		pnt_start[i] = BinarySearch(fast_start_dt,slow_start_dt[i])
 //		pnt_stop[i] = BinarySearch(fast_stop_dt,slow_stop_dt[i])
 		starti = BinarySearch(fast_start_dt,slow_start_dt[i])
 		stopi = BinarySearch(fast_stop_dt,slow_stop_dt[i])
-		if (starti == -1  && stopi == -1) 
+		if (starti == -1  && stopi == -1)
 			continue
 		elseif (starti == -2 && stopi == -2)
 			return 0
 		endif
-		
+
 		starti = (starti == -1) ? 0 : starti
 		stopi = (stopi == -2) ? numpnts(fast_stop_dt)-1 : stopi
-		
+
 		fast_dat[starti,stopi] = slow_dat[i]
-		
+
 	endfor
-	
+
 End
 
 // Calcuates stats over all data in specficed time periods
@@ -2031,10 +2031,10 @@ Function acg_stats_using_time_index(avg_per_start, avg_per_stop, dt, dat, output
 	wave dt
 	wave dat
 	string output_name
-	
+
 	make/o/n=0 all_data
 	wave all = all_data
-	
+
 	//make/o/n=(numpnts(avg_per_start)) $(output_name)
 	//wave avg = $(output_name)
 	//avg=NaN
@@ -2042,7 +2042,7 @@ Function acg_stats_using_time_index(avg_per_start, avg_per_stop, dt, dat, output
 	for (i=0; i<numpnts(avg_per_start); i+=1)
 		duplicate/o all, tmp_all
 		wave tmp = tmp_all
-		
+
 		variable starti = BinarySearch(dt, avg_per_start[i])
 		variable stopi = BinarySearch(dt, avg_per_stop[i])
 		if (starti >= 0 && stopi >=0)
@@ -2050,12 +2050,12 @@ Function acg_stats_using_time_index(avg_per_start, avg_per_stop, dt, dat, output
 			wave per = per_data
 			per = dat[p+starti]
 			concatenate/np/o {tmp,per}, all_data
-			
+
 		endif
 	endfor
-	
+
 	wave all = all_data
-	
+
 	make/o/n=4 $(output_name)
 	wave out = $(output_name)
 
@@ -2064,8 +2064,8 @@ Function acg_stats_using_time_index(avg_per_start, avg_per_stop, dt, dat, output
 	out[1] = V_sdev
 	out[2] = V_min
 	out[3] = V_max
-	
-	
+
+
 //		WaveStats/Q/R=[starti,stopi] dat
 //		variable avg_var = V_avg
 //		//print i, starti, stopi, avg_var
@@ -2083,14 +2083,14 @@ Function acg_avg_windD_using_time_index(avg_per_start, avg_per_stop, dt, windS,w
 	wave windS
 	wave windD
 	string output_name
-	
+
 	duplicate/o windD, tmp_windU, tmp_windV
 	wave wU = tmp_windU
 	wave wV = tmp_windV
-	
+
 	wU = -windS * sin(windD*(pi/180))
 	wV = -windS * cos(windD*(pi/180))
-	
+
 	make/o/n=(numpnts(avg_per_start)) $(output_name)
 	wave avg = $(output_name)
 	avg=NaN
@@ -2104,13 +2104,13 @@ Function acg_avg_windD_using_time_index(avg_per_start, avg_per_stop, dt, windS,w
 
 		WaveStats/Q/R=[starti,stopi] wV
 		variable wV_avg = V_avg
-		
+
 		//print i, starti, stopi, avg_var
 		if (starti >=0 && stopi >= 0)
 			avg[i] = atan2(-wU_avg, -wV_avg) * 180/pi
 		endif
 	endfor
-	
+
 	avg = (avg[p] < 0) ? avg[p]+360 : avg[p]
 
 End
@@ -2122,14 +2122,14 @@ End
 //	wave windS
 //	wave windD
 //	string output_name
-//	
+//
 //	duplicate/o windD, tmp_windU, tmp_windV
 //	wave wU = tmp_windU
 //	wave wV = tmp_windV
-//	
+//
 //	wU = -windS * sin(windD*(pi/180))
 //	wV = -windS * cos(windD*(pi/180))
-//	
+//
 //	make/o/n=(numpnts(avg_per_start)) $(output_name)
 //	wave sd = $(output_name)
 //	sd=NaN
@@ -2143,13 +2143,13 @@ End
 //
 //		WaveStats/Q/R=[starti,stopi] wV
 //		variable wV_avg = V_sdev
-//		
+//
 //		//print i, starti, stopi, avg_var
 //		if (starti >=0 && stopi >= 0)
 //			sd[i] = atan2(-wU_avg, -wV_avg) * 180/pi
 //		endif
 //	endfor
-//	
+//
 //	//avg = (avg[p] < 0) ? avg[p]+360 : avg[p]
 //
 //End
@@ -2160,7 +2160,7 @@ Function acg_avg_using_time_index(avg_per_start, avg_per_stop, dt, dat, output_n
 	wave dt
 	wave dat
 	string output_name
-	
+
 	make/o/n=(numpnts(avg_per_start)) $(output_name)
 	wave avg = $(output_name)
 	avg=NaN
@@ -2183,7 +2183,7 @@ Function acg_sd_using_time_index(avg_per_start, avg_per_stop, dt, dat, output_na
 	wave dt
 	wave dat
 	string output_name
-	
+
 	make/o/n=(numpnts(avg_per_start)) $(output_name)
 	wave avg = $(output_name)
 	avg=NaN
@@ -2206,7 +2206,7 @@ Function acg_min_using_time_index(avg_per_start, avg_per_stop, dt, dat, output_n
 	wave dt
 	wave dat
 	string output_name
-	
+
 	make/o/n=(numpnts(avg_per_start)) $(output_name)
 	wave avg = $(output_name)
 	avg=NaN
@@ -2229,7 +2229,7 @@ Function acg_max_using_time_index(avg_per_start, avg_per_stop, dt, dat, output_n
 	wave dt
 	wave dat
 	string output_name
-	
+
 	make/o/n=(numpnts(avg_per_start)) $(output_name)
 	wave avg = $(output_name)
 	avg=NaN
@@ -2253,24 +2253,30 @@ Function acg_avg_using_time_index_2d(avg_per_start, avg_per_stop, dt, dat, outpu
 	wave dt
 	wave dat // 2d wave
 	string output_name
-	
+
 	variable rows = numpnts(avg_per_start)
 	variable cols = dimsize(dat,1)
-	
+
 	make/o/n=(rows,cols) $(output_name)
 	wave avg = $(output_name)
 	avg=NaN
 	variable i,j
 	for (i=0; i<rows; i+=1)
 		variable starti = BinarySearch(dt, avg_per_start[i])
+		if (starti == -1)
+			starti = 0
+		endif
 		variable stopi = BinarySearch(dt, avg_per_stop[i])
+		if (stopi == -2)
+			stopi = numpnts(dt)-1
+		endif
 
 		for (j=0; j<cols; j+=1)
 			acg_get_column_from_2d(dat,j,"tmp_col")
 			wave tcol = tmp_col
-		
-			WaveStats/Q/R=[starti,stopi] tmp_col	
-			//print i,j,starti,stopi,V_avg		
+
+			WaveStats/Q/R=[starti,stopi] tmp_col
+			//print i,j,starti,stopi,V_avg
 			if (starti >=0 && stopi >= 0)
 				avg[i][j] = V_avg
 			endif
@@ -2285,24 +2291,30 @@ Function acg_sd_using_time_index_2d(avg_per_start, avg_per_stop, dt, dat, output
 	wave dt
 	wave dat // 2d wave
 	string output_name
-	
+
 	variable rows = numpnts(avg_per_start)
 	variable cols = dimsize(dat,1)
-	
+
 	make/o/n=(rows,cols) $(output_name)
 	wave avg = $(output_name)
 	avg=NaN
 	variable i,j
 	for (i=0; i<rows; i+=1)
 		variable starti = BinarySearch(dt, avg_per_start[i])
+		if (starti == -1)
+			starti = 0
+		endif
 		variable stopi = BinarySearch(dt, avg_per_stop[i])
+		if (stopi == -2)
+			stopi = numpnts(dt)-1
+		endif
 
 		for (j=0; j<cols; j+=1)
 			acg_get_column_from_2d(dat,j,"tmp_col")
 			wave tcol = tmp_col
-		
-			WaveStats/Q/R=[starti,stopi] tmp_col	
-			//print i,j,starti,stopi,V_avg		
+
+			WaveStats/Q/R=[starti,stopi] tmp_col
+			//print i,j,starti,stopi,V_avg
 			if (starti >=0 && stopi >= 0)
 				avg[i][j] = V_sdev
 			endif
@@ -2317,24 +2329,30 @@ Function acg_min_using_time_index_2d(avg_per_start, avg_per_stop, dt, dat, outpu
 	wave dt
 	wave dat // 2d wave
 	string output_name
-	
+
 	variable rows = numpnts(avg_per_start)
 	variable cols = dimsize(dat,1)
-	
+
 	make/o/n=(rows,cols) $(output_name)
 	wave avg = $(output_name)
 	avg=NaN
 	variable i,j
 	for (i=0; i<rows; i+=1)
 		variable starti = BinarySearch(dt, avg_per_start[i])
+		if (starti == -1)
+			starti = 0
+		endif
 		variable stopi = BinarySearch(dt, avg_per_stop[i])
+		if (stopi == -2)
+			stopi = numpnts(dt)-1
+		endif
 
 		for (j=0; j<cols; j+=1)
 			acg_get_column_from_2d(dat,j,"tmp_col")
 			wave tcol = tmp_col
-		
-			WaveStats/Q/R=[starti,stopi] tmp_col	
-			//print i,j,starti,stopi,V_avg		
+
+			WaveStats/Q/R=[starti,stopi] tmp_col
+			//print i,j,starti,stopi,V_avg
 			if (starti >=0 && stopi >= 0)
 				avg[i][j] = V_min
 			endif
@@ -2349,24 +2367,30 @@ Function acg_max_using_time_index_2d(avg_per_start, avg_per_stop, dt, dat, outpu
 	wave dt
 	wave dat // 2d wave
 	string output_name
-	
+
 	variable rows = numpnts(avg_per_start)
 	variable cols = dimsize(dat,1)
-	
+
 	make/o/n=(rows,cols) $(output_name)
 	wave avg = $(output_name)
 	avg=NaN
 	variable i,j
 	for (i=0; i<rows; i+=1)
 		variable starti = BinarySearch(dt, avg_per_start[i])
+		if (starti == -1)
+			starti = 0
+		endif
 		variable stopi = BinarySearch(dt, avg_per_stop[i])
+		if (stopi == -2)
+			stopi = numpnts(dt)-1
+		endif
 
 		for (j=0; j<cols; j+=1)
 			acg_get_column_from_2d(dat,j,"tmp_col")
 			wave tcol = tmp_col
-		
-			WaveStats/Q/R=[starti,stopi] tmp_col	
-			//print i,j,starti,stopi,V_avg		
+
+			WaveStats/Q/R=[starti,stopi] tmp_col
+			//print i,j,starti,stopi,V_avg
 			if (starti >=0 && stopi >= 0)
 				avg[i][j] = V_max
 			endif
@@ -2381,11 +2405,11 @@ Function acg_avg_using_time_index2(avg_per_start, avg_per_stop, dt, dat, output_
 	wave dt
 	wave dat
 	string output_name
-	
+
 	make/o/n=(numpnts(avg_per_start)) $(output_name)
 	wave avg = $(output_name)
-	
-	
+
+
 	variable i
 	for (i=0; i<numpnts(avg_per_start); i+=1)
 		//variable starti = BinarySearch(dt, avg_per_start[i])
@@ -2403,12 +2427,12 @@ Function acg_mask_by_value(mask_w, mask_value, mask_value_range, data_w, output_
 	variable mask_value_range
 	wave data_w
 	string output_name
-	
+
 	duplicate/o data_w $(output_name)
 	wave out = $output_name
-	
+
 	out = ( (mask_w[p] > mask_value - mask_value_range) && (mask_w[p] < mask_value + mask_value_range) ) ? data_w[p] : NaN
-	
+
 End
 
 Function/S acg_remove_quotes(str)
@@ -2424,26 +2448,26 @@ Function acg_remove_quotes_wave(str_w)
 		str_w[i] = acg_remove_quotes(str_w[i])
 	endfor
 End
-	
-	
+
+
 Function acg_get_column_from_2d(data,colnum,output_name)
 
 	wave data // 2d wave
-	variable colnum // column to strip out 
+	variable colnum // column to strip out
 	string output_name // name of resulting 1d wave containing the column
-	
-	if (colnum > dimsize(data,1)-1) 
+
+	if (colnum > dimsize(data,1)-1)
 		print "*** the input wave does not have that many columns ***"
 		return 0
 	endif
-	
+
 	make/o/D/n=(dimsize(data,0)) $(output_name)
 	wave out = $output_name
-	
+
 	out = data[p][colnum]
-	
-	
-	
+
+
+
 
 End
 
@@ -2453,18 +2477,18 @@ Function acg_mask_1D(dat,mask,uses_nans,output_name)
 	wave mask
 	variable uses_nans // 1=mask uses 1's and nans, 0=value based (1=good, 0=bad)
 	string output_name
-	
+
 	duplicate/o dat $output_name
 	wave out = $output_name
-	
+
 	out = NaN
-	
+
 	if (uses_nans)
 		out = dat*mask
 	else
 		out = (mask[p] > 0) ? dat[p] : NaN
 	endif
-	
+
 End
 
 Function acg_mask_2D(dat,mask,uses_nans,output_name)
@@ -2472,13 +2496,13 @@ Function acg_mask_2D(dat,mask,uses_nans,output_name)
 	wave mask
 	variable uses_nans // 1=mask uses 1's and nans, 0=value based (1=good, 0=bad)
 	string output_name
-	
+
 	duplicate/o dat $output_name
 	wave out = $output_name
-	
+
 	out = NaN
 
-	if (dimsize(mask,1) > 0) // uses 2d mask wave	
+	if (dimsize(mask,1) > 0) // uses 2d mask wave
 		if (uses_nans)
 			out = dat*mask
 		else
@@ -2491,13 +2515,13 @@ Function acg_mask_2D(dat,mask,uses_nans,output_name)
 			out = (mask[p] > 0) ? dat[p][q] : NaN
 		endif
 	endif
-	
+
 End
 
 
 // *********** ProjectInfo and TBM code *****************
 
-Structure PIE_Data 
+Structure PIE_Data
 	string	 	info
 	variable		saved
 EndStructure
@@ -2510,40 +2534,40 @@ Function/S acg_goto_ProjectInfo()
 	if (!datafolderexists("ProjectInfo"))
 		acg_init_ProjectInfo()
 	endif
-	
+
 	setdatafolder "root:ProjectInfo"
 	return sdf
 End
 
 Function acg_export_project_info()
-	
+
 	string sdf = acg_goto_ProjectInfo()
-	
+
 	SaveData/O/I/R
-	
+
 	setdatafolder sdf
 
 End
 
 Function acg_import_project_info()
-	
+
 	string sdf = getdatafolder(1)
 	setdatafolder root:
-	
+
 	LoadData/I/O/T/R
-	
+
 	setdatafolder sdf
-	
+
 End
 
 Function/S acg_goto_ProjectInfoDB()
 
 	string sdf = acg_goto_ProjectInfo()
-	
+
 	if (!datafolderexists("ProjectInfoDB"))
 		acg_init_ProjectInfoDB()
 	endif
-	
+
 	setdatafolder "ProjectInfoDB"
 	return sdf
 End
@@ -2551,11 +2575,11 @@ End
 Function/S acg_goto_PIC()
 
 	string sdf = acg_goto_ProjectInfo()
-	
+
 	if (!datafolderexists("gui_PIC"))
 		acg_init_PIC()
 	endif
-	
+
 	setdatafolder "gui_PIC"
 	return sdf
 End
@@ -2563,11 +2587,11 @@ End
 Function/S acg_goto_PIE()
 
 	string sdf = acg_goto_ProjectInfo()
-	
+
 	if (!datafolderexists("gui_PIE"))
 		acg_init_PIE()
 	endif
-	
+
 	setdatafolder "gui_PIE"
 	return sdf
 End
@@ -2575,20 +2599,20 @@ End
 // PIC = ProjectInfo Controller
 Function acg_display_PIC()
 
-	
+
 	//if (!datafolderexists(ProjectInfo_folder)) // init Project info
 	//	acg_init_ProjectInfo()
 	//endif
-	
+
 	acg_goto_ProjectInfo()
-	
+
 	acg_update_PIC_gui_data()
-	
+
 	DoWindow/F acg_ProjInfo_Controller
 	if (V_Flag != 0)
 		return 0
 	endif
-//	
+//
 //	init_gui()
 	Execute "acg_ProjInfo_Controller()"
 
@@ -2602,9 +2626,9 @@ Function acg_init_PIC()
 	variable/G PIC_data_saved
 	string/G PIC_info_string
 	string/G tmp_project_info
-	
-	setdatafolder sdf	
-	
+
+	setdatafolder sdf
+
 End
 
 Function acg_init_PIE()
@@ -2612,18 +2636,18 @@ Function acg_init_PIE()
 	string sdf = acg_goto_ProjectInfo()
 
 	newdatafolder/o/s gui_PIE
-	
+
 	string/G proj_name = ""
 
 	// --- Start Time ---
 	variable/G start_year = 2010
 	variable/G start_month = 1
 	variable/G start_day = 1
-	
+
 	variable/G start_hour = 0
 	variable/G start_minute = 0
-	variable/G start_second = 0	
-	
+	variable/G start_second = 0
+
 	// --- Stop Time ---
 	variable/G stop_year = 2010
 	variable/G stop_month = 1
@@ -2631,12 +2655,12 @@ Function acg_init_PIE()
 
 	variable/G stop_hour = 0
 	variable/G stop_minute = 0
-	variable/G stop_second = 0	
-	
+	variable/G stop_second = 0
+
 	variable/G proj_info_entry_saved = 0 // 0 = cancel, 1 = save from edit panel
 
 	setdatafolder ::
-	
+
 	acg_reset_PIE_data()
 
 End
@@ -2644,65 +2668,65 @@ End
 Function acg_update_PIC_gui_data()
 //	string sdf = getdatafolder(1)
 //	setdatafolder ProjectInfo_folder
-	
+
 	//acg_init_PIC()
-	
 
 
-	
+
+
 	NVAR isSet = this_project_is_set
 	SVAR proj_info = this_project_info
 	//newdatafolder/o/s gui_PIC
 	//variable/G PIC_data_saved = 0
-	
+
 	//string/G PIC_info_string
-	
+
 	string sdf = acg_goto_PIC()
-	
+
 	SVAR display_str = PIC_info_string
 	if (!isSet)
 		//display_str = "No Project Info"
 		display_str = "\\Z14Project Name: N/A  \\Z12\r\r\tStart Time: N/A   \r\tStop Time: N/A  "
 		return 0
 	endif
-	
+
 	//SVAR proj_info = ::this_project_info
 	//string/G tmp_project_info = proj_info
-	
+
 	SVAR info = tmp_project_info
 	info = proj_info
-	
+
 	string val = stringbykey("NAME",info)
 	display_str = "\\Z14Project Name: " + val + "\\Z12\r\r"
 
 	variable dt = numberbykey("START_DT",info)
-	display_str += "\tStart Time: " + secs2date(dt,0) + " " + secs2time(dt,3) + "\r"	
-	
+	display_str += "\tStart Time: " + secs2date(dt,0) + " " + secs2time(dt,3) + "\r"
+
 	dt = numberbykey("STOP_DT",info)
 	display_str += "\tStop Time: " + secs2date(dt,0) + " " + secs2time(dt,3)
 
-	
-	setdatafolder sdf 
+
+	setdatafolder sdf
 End
 
 Function acg_init_ProjectInfo()
 
 	//string sdf = getdatafolder(1)
 	setdatafolder root:
-	
+
 	// create ProjectInfo data folder(s) if they don't exist
 	//     ProjectInfo              <-- for current expt
 	//		ProjectInfoDB    <-- global info
-	
-	// 
-	
+
+	//
+
 	newdatafolder/o/s ProjectInfo
-	
+
 	//string/G this_project_info = "NAME:;START_DT:;STOP_DT:;"
 	string/G this_project_info = ProjectInfo_empty_string
-	
+
 //	string/G this_proj_name = ""
-//	
+//
 //	variable/G this_start_year = 2008
 //	variable/G this_start_month = 1
 //	variable/G this_start_day = 1
@@ -2710,7 +2734,7 @@ Function acg_init_ProjectInfo()
 //	variable/G this_start_hour = 0
 //	variable/G this_start_minute = 0
 //	variable/G this_start_second = 0
-//	
+//
 //	variable/G this_stop_year = 2008
 //	variable/G this_stop_month = 1
 //	variable/G this_stop_day = 1
@@ -2718,12 +2742,12 @@ Function acg_init_ProjectInfo()
 //	variable/G this_stop_hour = 0
 //	variable/G this_stop_minute = 0
 //	variable/G this_stop_second = 0
-//	
+//
 	variable/G this_project_is_set = 0
-	
+
 //	string/G this_project_info_string = "No Project Info\rNo Project Info\rNo Project Info"
 	//string/G this_project_info_string = "\\Z14Project Name: N/A  \\Z12\r\r\tStart Time: N/A   \r\tStop Time: N/A  "
-	
+
 
 	//acg_reset_PIE_data()
 
@@ -2731,7 +2755,7 @@ Function acg_init_ProjectInfo()
 
 //	newdatafolder/o/s gui
 //	string/G proj_name = ""
-//	
+//
 //	variable/G start_year = 2008
 //	variable/G start_month = 1
 //	variable/G start_day = 1
@@ -2739,7 +2763,7 @@ Function acg_init_ProjectInfo()
 //	variable/G start_hour = 0
 //	variable/G start_minute = 0
 //	variable/G start_second = 0
-//	
+//
 //	variable/G stop_year = 2008
 //	variable/G stop_month = 1
 //	variable/G stop_day = 1
@@ -2747,49 +2771,49 @@ Function acg_init_ProjectInfo()
 //	variable/G stop_hour = 0
 //	variable/G stop_minute = 0
 //	variable/G stop_second = 0
-//	
+//
 //	variable/G proj_info_entry_saved = 0 // 0 = cancel, 1 = save from edit panel
 //	setdatafolder ::
-	
+
 	//setdatafolder sdf
 
 End
 
 Function acg_reset_PIE_data()
-	
+
 	acg_set_PIE_data(ProjectInfo_empty_string)
-	
+
 End
 
 // PIE = ProjectInfoEntry
 Function acg_set_PIE_data(info)
 	string info
-	
+
 //	string sdf = getdatafolder(1)
 //	setdatafolder ProjectInfo_folder
 //
 //	newdatafolder/o/s gui_PIE
-	
+
 	string sdf = acg_goto_PIE()
-	
-	SVAR proj_name 
+
+	SVAR proj_name
 	proj_name = stringbykey("NAME",info)
 
-	
+
 	// --- Start Time ---
 	NVAR start_year
 	NVAR start_month
 	NVAR start_day
 	start_year = 2010
-	start_month = 1 
-	start_day = 1 
-	
-	NVAR start_hour 
-	NVAR start_minute 
-	NVAR start_second 
+	start_month = 1
+	start_day = 1
+
+	NVAR start_hour
+	NVAR start_minute
+	NVAR start_second
 	start_hour = 0
-	start_minute = 0 
-	start_second = 0 
+	start_minute = 0
+	start_second = 0
 
 	variable val = numberbykey("START_DT",info)
 	if (numtype(val) == 0)
@@ -2800,22 +2824,22 @@ Function acg_set_PIE_data(info)
 		start_minute = acg_get_minute(val)
 		start_second = acg_get_second(val)
 	endif
-	
-	
+
+
 	// --- Stop Time ---
 	NVAR stop_year
 	NVAR stop_month
 	NVAR stop_day
 	stop_year = 2010
-	stop_month = 1 
-	stop_day = 1 
+	stop_month = 1
+	stop_day = 1
 
 	NVAR stop_hour
 	NVAR stop_minute
 	NVAR stop_second
 	stop_hour = 0
-	stop_minute = 0 
-	stop_second = 0 
+	stop_minute = 0
+	stop_second = 0
 
 	val = numberbykey("STOP_DT",info)
 	if (numtype(val) == 0)
@@ -2826,8 +2850,8 @@ Function acg_set_PIE_data(info)
 		stop_minute = acg_get_minute(val)
 		stop_second = acg_get_second(val)
 	endif
-	
-	
+
+
 	NVAR proj_info_entry_saved // 0 = cancel, 1 = save from edit panel
 	proj_info_entry_saved = 0
 
@@ -2836,13 +2860,13 @@ Function acg_set_PIE_data(info)
 End
 
 Function acg_set_ProjectInfo()
-	
+
 	// dialog -> set local only or select from db
 	//	if db
 	// 		if doesn't exist...
 	//			create or import
-	
-	
+
+
 End
 
 Function acg_init_ProjectInfoDB()
@@ -2850,9 +2874,9 @@ Function acg_init_ProjectInfoDB()
 	acg_goto_ProjectInfo()
 
 	newdatafolder/o/s ProjectInfoDB
-		
+
 	string/G entry_proj_name = ""
-	
+
 	variable/G entry_start_year = 2010
 	variable/G entry_start_month = 1
 	variable/G entry_start_day = 1
@@ -2860,14 +2884,14 @@ Function acg_init_ProjectInfoDB()
 	variable/G entry_start_hour = 0
 	variable/G entry_start_minute = 0
 	variable/G entry_start_second = 0
-	
+
 	variable/G entry_stop_year = 2010
 	variable/G entry_stop_month = 1
 	variable/G entry_stop_day = 1
 
 	variable/G entry_stop_hour = 0
 	variable/G entry_stop_minute = 0
-	variable/G entry_stop_second = 0	
+	variable/G entry_stop_second = 0
 
 End
 
@@ -2888,7 +2912,7 @@ Function acg_edit_ProjectInfoDB()
 		if (V_Flag != 0)
 		return 0
 	endif
-	
+
 	Execute "acg_ProjInfoDB_panel()"
 
 End
@@ -2903,7 +2927,7 @@ Function acg_edit_ProjectInfoDB_entry()
 End
 
 Function acg_delete_ProjectInfoDB_entry()
-	
+
 End
 
 Function acg_select_ProjectInfoDB_entry()
@@ -2911,12 +2935,12 @@ Function acg_select_ProjectInfoDB_entry()
 End
 
 Function acg_edit_current_ProjectInfo()
-	
+
 	struct PIE_Data data
 	string sdf = acg_goto_ProjectInfo()
-	
+
 	string info = ProjectInfo_empty_string
-	
+
 	NVAR isSet = this_project_is_set
 	SVAR current_info = this_project_info
 	if (isSet)
@@ -2926,7 +2950,7 @@ Function acg_edit_current_ProjectInfo()
 	data.saved = 0
 	//print isSet, data
 	acg_display_PIE_panel(data)
-	if (data.saved) 
+	if (data.saved)
 		current_info = data.info
 		isSet = 1
 		acg_update_PIC_gui_data()
@@ -2936,7 +2960,7 @@ End
 
 Function acg_display_PIE_panel(data)
 	struct PIE_Data &data
-	
+
 	DoWindow/K acg_ProjInfo_entry_panel
 	acg_set_PIE_data(data.info)
 	Execute "acg_ProjInfo_entry_panel()"
@@ -2949,8 +2973,8 @@ Function acg_display_PIE_panel(data)
 	print data
 	setdatafolder ::
 	//killdatafolder/Z gui_PIE
-End	
-	
+End
+
 Function acg_set_PIE_info()
 
 	string sdf = acg_goto_PIE()
@@ -2970,8 +2994,8 @@ Function acg_set_PIE_info()
 
 	variable start_dt = date2secs(start_year, start_month, start_day) + start_hour*60*60 + start_minute*60 + start_second
 	variable stop_dt = date2secs(stop_year, stop_month, stop_day) + stop_hour*60*60 + stop_minute*60 + stop_second
-		
-	
+
+
 	string/G proj_info = ProjectInfo_empty_string
 	proj_info = acg_set_info(proj_info,proj_name,start_dt,stop_dt)
 	setdatafolder sdf
@@ -2982,27 +3006,27 @@ Function/S acg_set_info(info, name, start_dt, stop_dt)
 	string name
 	variable start_dt
 	variable stop_dt
-	
+
 	info = ReplaceStringByKey("NAME",info,name)
 	info = ReplaceNumberByKey("START_DT",info,start_dt)
 	info = ReplaceNumberByKey("STOP_DT",info,stop_dt)
-	
+
 	return info
 End
 
 Function ProjInfo_Entry_ButtonProc(ba) : ButtonControl
 	STRUCT WMButtonAction &ba
-	
+
 	//string sdf = getdatafolder(1)
 	//setdatafolder ProjectInfo_folder
 	//setdatafolder :gui_PIE
-	
+
 	switch( ba.eventCode )
 		case 2: // mouse up
 
 			string sdf = acg_goto_PIE()
-			NVAR saved = proj_info_entry_saved		
-		
+			NVAR saved = proj_info_entry_saved
+
 			print ba.ctrlName
 			if (cmpstr(ba.ctrlName,"entry_save_button") == 0 )
 				saved = 1
@@ -3011,18 +3035,18 @@ Function ProjInfo_Entry_ButtonProc(ba) : ButtonControl
 			elseif (cmpstr(ba.ctrlName,"entry_cancel_button") == 0 )
 				saved = 0
 				print "Cancel...saved = ", saved
-			else 
+			else
 				saved = 0
 				print "Unknown...saved = ", saved
 			endif
-			
+
 			killwindow acg_ProjInfo_entry_panel
 			setdatafolder ::
 			//killdatafolder :gui_PIE
 			//setdatafolder sdf
 			break
 	endswitch
-	
+
 	return 0
 End
 
@@ -3098,14 +3122,14 @@ Function acg_ProjInfoDB_ButtonProc(ba) : ButtonControl
 	switch( ba.eventCode )
 		case 2: // mouse up
 			// click code here
-			
+
 			print ba.ctrlName
 			if (cmpstr(ba.ctrlName,"add_entry_button")==0)
 				acg_set_PIE_data(ProjectInfo_empty_string)
 				Execute "acg_ProjInfo_entry_panel()"
 				PauseForUser acg_ProjInfo_entry_panel
 			elseif (cmpstr(ba.ctrlName,"Edit")==0)
-				// get info for selected project 
+				// get info for selected project
 				// set gui entry data
 			elseif (cmpstr(ba.ctrlName,"Delete")==0)
 				// popup "are you sure?"
@@ -3147,7 +3171,7 @@ EndMacro
 
 Function acg_PIC_Ctrl_ButtonProc(ba) : ButtonControl
 	STRUCT WMButtonAction &ba
-	
+
 	switch( ba.eventCode )
 		case 2: // mouse up
 			// click code here
@@ -3157,17 +3181,17 @@ Function acg_PIC_Ctrl_ButtonProc(ba) : ButtonControl
 			//setdatafolder :gui_PIC
 			acg_goto_ProjectInfo()
 			//NVAR saved = proj_info_entry_saved
-			//saved = 0			
+			//saved = 0
 			variable close_window = 0
-			
+
 			if (cmpstr(ba.ctrlName,"acg_pic_clear_button")==0)
-				// are you sure...will remove ProjectInfo 
+				// are you sure...will remove ProjectInfo
 				NVAR isSet = this_project_is_set
 				isSet = 0
 				acg_update_PIC_gui_data()
-						
+
 			elseif (cmpstr(ba.ctrlName,"acg_pic_cancel_button")==0)
-					
+
 				close_window = 1
 			elseif (cmpstr(ba.ctrlName,"acg_pic_save_button")==0)
 				// save data to main folder
@@ -3179,8 +3203,8 @@ Function acg_PIC_Ctrl_ButtonProc(ba) : ButtonControl
 				setdatafolder ::
 				//killdatafolder/Z :gui_PIC
 			endif
-			
-			//setdatafolder sdf			
+
+			//setdatafolder sdf
 			break
 	endswitch
 
@@ -3195,9 +3219,9 @@ Function acg_PIC_Edit_ButtonProc(ba) : ButtonControl
 			// click code here
 			if (cmpstr(ba.ctrlName,"acg_pic_edit_local_button")==0)
 				acg_edit_current_ProjectInfo()
-						
+
 			elseif (cmpstr(ba.ctrlName,"acg_pic_edit_db_button")==0)
-					
+
 			endif
 
 			break
@@ -3385,7 +3409,7 @@ Function acg_display_TBM()
 	if (WinType("acg_time_base_manager") == 7)
 		DoWindow/F acg_time_base_manager
 	else
-	
+
 	string sdf = acg_goto_TBM()
 	setdatafolder sdf
 
@@ -3534,9 +3558,9 @@ EndMacro
 
 Function acg_TBM_ButtonProc(ba) : ButtonControl
 	STRUCT WMButtonAction &ba
-	
-	string sdf 
-	
+
+	string sdf
+
 	switch( ba.eventCode )
 		case 2: // mouse up
 			// click code here
@@ -3545,13 +3569,13 @@ Function acg_TBM_ButtonProc(ba) : ButtonControl
 			//setdatafolder :gui_PIC
 //			acg_goto_ProjectInfo()
 //			//NVAR saved = proj_info_entry_saved
-//			//saved = 0			
+//			//saved = 0
 //			variable close_window = 0
-			
+
 			if (cmpstr(ba.ctrlName,"done_button")==0)
-			
+
 				killwindow acg_time_base_manager
-						
+
 			elseif (cmpstr(ba.ctrlName,"reset_button")==0)
 				sdf = acg_goto_acg_packages()
 				acg_init_TBM()
@@ -3561,13 +3585,13 @@ Function acg_TBM_ButtonProc(ba) : ButtonControl
 				WS_ClearSelection("acg_time_base_manager", "dt_stop_wave_sel")
 				// clear data selector
 				WS_ClearSelection("acg_time_base_manager", "data_wave_sel")
-				
+
 				setdatafolder sdf
 
 			elseif (cmpstr(ba.ctrlName,"do_it_button")==0)
 
 				sdf = acg_goto_TBM()
-				
+
 				string/G dt_wave = WS_SelectedObjectsList("acg_time_base_manager", "dt_wave_sel")
 				NVAR use_stop = input_use_start_stop_cb
 				if (use_stop)
@@ -3576,10 +3600,10 @@ Function acg_TBM_ButtonProc(ba) : ButtonControl
 				string/G data_waves = WS_SelectedObjectsList("acg_time_base_manager", "data_wave_sel")
 
 				acg_TBM_run()
-				
+
 				setdatafolder sdf
 //			elseif (cmpstr(ba.ctrlName,"acg_pic_cancel_button")==0)
-//					
+//
 //				close_window = 1
 //			elseif (cmpstr(ba.ctrlName,"acg_pic_save_button")==0)
 //				// save data to main folder
@@ -3591,8 +3615,8 @@ Function acg_TBM_ButtonProc(ba) : ButtonControl
 //				setdatafolder ::
 //				//killdatafolder/Z :gui_PIC
 //			endif
-			
-			//setdatafolder sdf			
+
+			//setdatafolder sdf
 			break
 	endswitch
 
@@ -3603,10 +3627,10 @@ Function acg_TBM_run()
 
 	string sdf = acg_goto_TBM()
 
-	NVAR tb = output_common_tb_cb 
-	NVAR avg = output_avg_cb 
-	NVAR expand =  output_expand_cb 
-	NVAR proj_info  = output_proj_info_cb 
+	NVAR tb = output_common_tb_cb
+	NVAR avg = output_avg_cb
+	NVAR expand =  output_expand_cb
+	NVAR proj_info  = output_proj_info_cb
 
 	NVAR input_tb = input_common_tb_cb
 	NVAR input_wn = input_use_wavenotes_cb
@@ -3616,9 +3640,9 @@ Function acg_TBM_run()
 	NVAR use_stop = input_use_start_stop_cb
 	if (use_stop)
 		//string/G dt_stop_wave = WS_SelectedObjectsList("acg_time_base_manager", "dt_stop_wave_sel")
-		SVAR dt_stop_w =  dt_stop_wave 
+		SVAR dt_stop_w =  dt_stop_wave
 	endif
-	SVAR data_w = data_waves 
+	SVAR data_w = data_waves
 
 	// check that start and stop times selected if box is checked
 	if (input_start_stop && (itemsinlist(dt_w) == 0) )
@@ -3631,17 +3655,17 @@ Function acg_TBM_run()
 
 	// try to use wavescaling for dt info if no dt wave is selected
 	variable calc_dt = 0
-	if (itemsinlist(dt_w) == 0 || input_wn) 
+	if (itemsinlist(dt_w) == 0 || input_wn)
 		calc_dt = 1
 	endif
-	
-	// Process output request // 
-	
+
+	// Process output request //
+
 	variable i,j,k
-	
+
 	if (tb) // put on common timebase
 
-		
+
 		NVAR out_tb_val = output_tb_val
 		string dt_name = stringfromlist(0,dt_w)
 		variable out_tb = out_tb_val
@@ -3656,25 +3680,25 @@ Function acg_TBM_run()
 			endif
 			string w_folder  = w_path[0,last_colon-1]
 			string w_name = w_path[last_colon+1,strlen(w_path)-1]
-			
+
 			wave w = $w_path
-						
+
 			if ( strlen(dt_name) == 0)
 				// skip and display message?
 			else
-			
+
 				wave src_dt = $dt_name
-				
+
 				// make sure working tb folder exists
 				newdatafolder/o/s $acg_tmp_timebase_folder
 				if (datafolderexists("input"))
 					killdatafolder/Z :input
 				endif
 				newdatafolder/o/s :input
-				
+
 				duplicate/o src_dt Start_DateTime
 				duplicate/o w $w_name
-				
+
 				// set global var for existing function
 				newdatafolder/o root:gui
 				if (!waveexists(root:gui:last_timebase))
@@ -3682,17 +3706,17 @@ Function acg_TBM_run()
 				endif
 				NVAR last_tb = root:gui:last_timebase
 				last_tb = out_tb
-				
+
 				// run tb function
 				acg_common_timebase_data(0)
-				
+
 				// duplicate results into proper tb_<>
 				setdatafolder (w_folder+":")
 				newdatafolder/o/s $("common_tb_" + num2str(out_tb))
-				
+
 				duplicate/o $(acg_tmp_timebase_folder  + ":common_tw") date_time
 				duplicate/o $(acg_tmp_timebase_folder  + ":" + w_name + "_c") $w_name
-				
+
 				// set wavenotes on w_name
 				wave w = $w_name
 				string wnote = note(w)
@@ -3700,15 +3724,15 @@ Function acg_TBM_run()
 				Note/K w
 				Note w, wnote
 
-			
+
 			endif
-			
+
 		endfor
-		
+
 		killdatafolder/Z $acg_tmp_timebase_folder
 		// clean up tmp waves and folders
 	elseif (avg) // Average selected waves
-				
+
 		NVAR in_tb_val = input_tb_val
 		NVAR out_avg_val = output_avg_val
 		dt_name = stringfromlist(0,dt_w)
@@ -3724,12 +3748,12 @@ Function acg_TBM_run()
 			endif
 			w_folder  = w_path[0,last_colon-1]
 			w_name = w_path[last_colon+1,strlen(w_path)-1]
-			
+
 			wave w = $w_path
-			
+
 			//NVAR input_tb_val = input_tb_val
 			if (calc_dt)
-				
+
 				// check for wavenotes first
 				wnote = note(w)
 				variable wn_tb = NumberByKey(TBM_tb_tag,wnote)
@@ -3742,9 +3766,9 @@ Function acg_TBM_run()
 				 	in_tb = tmp_tb
 					do_calc_dt = 1
 				endif
-				
+
 				if (do_calc_dt)
-				 	variable tmp_start = leftx(w)				 	
+				 	variable tmp_start = leftx(w)
 				 	make/D/o/n=(numpnts(w)) tmp_dt
 				 	wave tmp_dt
 				 	tmp_dt[0] = tmp_start
@@ -3752,24 +3776,24 @@ Function acg_TBM_run()
 				 	dt_name = "tmp_dt"
 				endif
 			endif
-			
+
 			if ( strlen(dt_name) == 0)
 				// skip and display message?
 				return 0
 			else
-			
-				wave src_dt = $dt_name				
-				
+
+				wave src_dt = $dt_name
+
 				// make sure working tb folder exists
 				newdatafolder/o/s $acg_tmp_dataload_folder
 				if (datafolderexists("input"))
 					killdatafolder/Z :input
 				endif
 				newdatafolder/o/s :input
-				
+
 				duplicate/o src_dt Start_DateTime
 				duplicate/o w $w_name
-				
+
 				// set global var for existing function
 				newdatafolder/o root:gui
 				if (!waveexists(root:gui:last_avgtime))
@@ -3777,17 +3801,17 @@ Function acg_TBM_run()
 				endif
 				NVAR last_avg = root:gui:last_avgtime
 				last_avg = out_avg
-				
+
 				// run avg function
 				acg_average_loaded_data()
-				
+
 				// duplicate results into proper avg_<>
 				setdatafolder (w_folder+":")
 				newdatafolder/o/s $("avg_" + num2str(out_avg))
-				
+
 				duplicate/o $(acg_tmp_dataload_folder  + ":avg_tw") date_time
 				duplicate/o $(acg_tmp_dataload_folder  + ":" + w_name + "_avg") $w_name
-				
+
 				// set wavenotes on w_name
 				wave w = $w_name
 				wnote = note(w)
@@ -3796,11 +3820,11 @@ Function acg_TBM_run()
 				Note/K w
 				Note w, wnote
 
-			
+
 			endif
-			
+
 		endfor
-		
+
 		// clean up tmp waves and folders
 		sdf = acg_goto_TBM()
 		killwaves/Z tmp_dt
@@ -3808,7 +3832,7 @@ Function acg_TBM_run()
 		setdatafolder sdf
 
 	elseif (expand) // Expand selected waves
-				
+
 		NVAR in_tb_val = input_tb_val
 		NVAR out_expand_val = output_expand_val
 		dt_name = stringfromlist(0,dt_w)
@@ -3824,12 +3848,12 @@ Function acg_TBM_run()
 			endif
 			w_folder  = w_path[0,last_colon-1]
 			w_name = w_path[last_colon+1,strlen(w_path)-1]
-			
+
 			wave w = $w_path
-			
+
 			//NVAR input_tb_val = input_tb_val
 			if (calc_dt)
-				
+
 				// check for wavenotes first
 				wnote = note(w)
 				wn_tb = NumberByKey(TBM_tb_tag,wnote)
@@ -3842,9 +3866,9 @@ Function acg_TBM_run()
 				 	in_tb = tmp_tb
 					do_calc_dt = 1
 				endif
-				
+
 				if (do_calc_dt)
-				 	tmp_start = leftx(w)				 	
+				 	tmp_start = leftx(w)
 				 	make/D/o/n=(numpnts(w)) tmp_dt
 				 	wave tmp_dt
 				 	tmp_dt[0] = tmp_start
@@ -3852,27 +3876,27 @@ Function acg_TBM_run()
 				 	dt_name = "tmp_dt"
 				endif
 			endif
-			
+
 			if ( strlen(dt_name) == 0)
 				// skip and display message?
 				return 0
 			else
-			
+
 				wave src_dt = $dt_name
-								
+
 				variable startdt = src_dt[0]
 				variable stopdt = src_dt[numpnts(src_dt)-1]
 				acg_expand_wave_to_tb(startdt, stopdt, in_tb, out_expand, src_dt, w, "expand_dt", "expand_data", 0)
 				wave exp_dt = $("expand_dt")
 				wave exp_data = $("expand_data")
-								
+
 				// duplicate results into proper avg_<>
 				setdatafolder (w_folder+":")
 				newdatafolder/o/s $("expand_" + num2str(out_expand))
-				
+
 				duplicate/o exp_dt date_time
 				duplicate/o exp_data $w_name
-				
+
 				// set wavenotes on w_name
 				wave w = $w_name
 				wnote = note(w)
@@ -3881,24 +3905,24 @@ Function acg_TBM_run()
 				Note/K w
 				Note w, wnote
 
-			
+
 			endif
-			
+
 		endfor
-		
+
 		// clean up tmp waves and folders
 		sdf = acg_goto_TBM()
 		killwaves/Z tmp_dt, expand_dt, expand_data
 		setdatafolder sdf
-		
+
 	elseif (proj_info) // Put on project times
-		
+
 		if (!acg_project_is_set())
 			// msg: define project first
 			return 0
 		endif
 
-		
+
 		NVAR out_tb_val = output_tb_val
 		dt_name = stringfromlist(0,dt_w)
 		out_tb = out_tb_val
@@ -3913,12 +3937,12 @@ Function acg_TBM_run()
 			endif
 			w_folder  = w_path[0,last_colon-1]
 			w_name = w_path[last_colon+1,strlen(w_path)-1]
-			
+
 			wave w = $w_path
-			
+
 			//NVAR input_tb_val = input_tb_val
 			if (calc_dt)
-				
+
 				// check for wavenotes first
 				wnote = note(w)
 				wn_tb = NumberByKey(TBM_tb_tag,wnote)
@@ -3931,9 +3955,9 @@ Function acg_TBM_run()
 				 	out_tb = tmp_tb
 					do_calc_dt = 1
 				endif
-				
+
 				if (do_calc_dt)
-				 	tmp_start = leftx(w)				 	
+				 	tmp_start = leftx(w)
 				 	make/D/o/n=(numpnts(w)) tmp_dt
 				 	wave tmp_dt
 				 	tmp_dt[0] = tmp_start
@@ -3941,15 +3965,15 @@ Function acg_TBM_run()
 				 	dt_name = "tmp_dt"
 				endif
 			endif
-			
+
 			if ( strlen(dt_name) == 0)
 				// skip and display message?
 				return 0
 			else
-			
+
 				wave src_dt = $dt_name
-				
-				
+
+
 				// create project datetime wave
 				variable pstart = acg_get_project_start_dt()
 				variable pstop = acg_get_project_stop_dt()
@@ -3959,44 +3983,44 @@ Function acg_TBM_run()
 				wave proj_dt
 				proj_dt[0] = pstart
 				proj_dt[1,] = proj_dt[p-1] + out_tb
-								
-				// create new wave 
+
+				// create new wave
 				duplicate/o proj_dt pdata
 				wave pdat  = pdata
 				pdat = NaN
 				SetScale/P x proj_dt[0],out_tb,"dat", pdat
-				
-				 
-				// find first index				 
+
+
+				// find first index
 				variable first_index = -1
 				variable last_index = -1
 				j=-1
 				do
 					j+=1
 					first_index = BinarySearch(proj_dt,src_dt[j])
-					//print j, src_dt[j] - leftx(pdat)					
+					//print j, src_dt[j] - leftx(pdat)
 				while (first_index < 0 && j<numpnts(src_dt))
 
 				k=numpnts(src_dt)
 				do
 					k-=1
-					last_index = BinarySearch(proj_dt,src_dt[k])					
+					last_index = BinarySearch(proj_dt,src_dt[k])
 				while (last_index < 0 && k>=0)
-				
+
 				if (first_index<0 && last_index<0) // no matching points
 					continue
 				endif
-				
+
 				variable match_cnt = k-j
-				pdat[first_index, first_index+match_cnt] = w[p - first_index + j]				
-								
+				pdat[first_index, first_index+match_cnt] = w[p - first_index + j]
+
 				// duplicate results into proper tb_<>
 				setdatafolder (w_folder+":")
 				newdatafolder/o/s $("project_tb_" + num2str(out_tb))
-				
+
 				duplicate/o proj_dt date_time
 				duplicate/o pdat $w_name
-				
+
 				// set wavenotes on w_name
 				wave w = $w_name
 				wnote = note(w)
@@ -4005,11 +4029,11 @@ Function acg_TBM_run()
 				Note/K w
 				Note w, wnote
 
-			
+
 			endif
-			
+
 		endfor
-		
+
 		// clean up tmp waves and folders
 		sdf = acg_goto_TBM()
 		killwaves/Z pdata, proj_dt, tmp_dt
@@ -4017,22 +4041,22 @@ Function acg_TBM_run()
 		// killdatafolder/Z $acg_tmp_timebase_folder
 
 	endif
-			
+
 End
 
 Function acg_init_acg_packages()
-	
+
 	// nothing here for now but creating acg folder
 	newdatafolder/o :acg
 End
 
 Function/S acg_goto_acg_packages()
-	
+
 	string sdf = getdatafolder(1)
-	
+
 	setdatafolder root:
 	newdatafolder/o/s :Packages
-	
+
 	if (!datafolderexists("acg"))
 		acg_init_acg_packages()
 	endif
@@ -4042,9 +4066,9 @@ Function/S acg_goto_acg_packages()
 End
 
 Function acg_init_TBM()
-	
+
 	newdatafolder/o/s :TBM
-	
+
 	// check boxes
 	variable/G input_common_tb_cb = 0
 	variable/G input_use_wavenotes_cb = 1
@@ -4053,13 +4077,13 @@ Function acg_init_TBM()
 	variable/G output_avg_cb = 0
 	variable/G output_expand_cb = 0
 	variable/G output_proj_info_cb = 0
-	
+
 	// value fields
 	variable/G input_tb_val = 1
 	variable/G output_tb_val = 1
 	variable/G output_avg_val = 60
 	variable/G output_expand_val = 60
-	
+
 	setdatafolder ::
 
 End
@@ -4067,13 +4091,13 @@ End
 Function/S acg_goto_TBM()
 
 	string sdf = acg_goto_acg_packages()
-	
+
 	if (!datafolderexists("TBM"))
 		acg_init_TBM()
 	endif
-	
+
 	setdatafolder :TBM
-	
+
 	return sdf
 End
 
@@ -4083,14 +4107,14 @@ Function acg_toggle_tbm_out_opt(cba) : CheckBoxControl
 	switch( cba.eventCode )
 		case 2: // mouse up
 			Variable checked = cba.checked
-			
+
 			string sdf = acg_goto_TBM()
 
-			NVAR tb = output_common_tb_cb 
-			NVAR avg = output_avg_cb 
-			NVAR expand =  output_expand_cb 
-			NVAR proj_info  = output_proj_info_cb 
-			
+			NVAR tb = output_common_tb_cb
+			NVAR avg = output_avg_cb
+			NVAR expand =  output_expand_cb
+			NVAR proj_info  = output_proj_info_cb
+
 			if (cmpstr(cba.ctrlName,"output_common_tb_check")==0)
 				avg = 0
 				expand = 0
@@ -4110,9 +4134,9 @@ Function acg_toggle_tbm_out_opt(cba) : CheckBoxControl
 
 			//elseif (cmpstr(cba.ctrlName,"output_common_tb_check")==0)
 			endif
-			
+
 			setdatafolder sdf
-			
+
 			break
 	endswitch
 
@@ -4145,7 +4169,7 @@ Function acg_wind_rose_by_time(tw,start_dt, stop_dt, wDir, wParam, angleBinWidth
 			endif
 		endfor
 	endif
-//	if (start_i < 0) 
+//	if (start_i < 0)
 //		print "Start Time not in datetime wave"
 //		return 1
 //	endif
@@ -4163,11 +4187,11 @@ Function acg_wind_rose_by_time(tw,start_dt, stop_dt, wDir, wParam, angleBinWidth
 			endif
 		endfor
 	endif
-//	if (stop_i < 0) 
+//	if (stop_i < 0)
 //		print "Stop Time not in datetime wave"
 //		return 1
 //	endif
-	
+
 	acg_wind_rose_by_index(start_i, stop_i, wDir, wParam, angleBinWidth, calmSpeedBin, speedBinWidth, maxSpeed)
 
 End
@@ -4185,7 +4209,7 @@ Function acg_wind_rose_by_index(start_i, stop_i, wDir, wParam, angleBinWidth, ca
 
 	Variable radiusMax = 100	// 1 for probability/frequency, 100 for percent	...set this manually
 
-	string sdf = getdatafolder(1)	
+	string sdf = getdatafolder(1)
 
 	newdatafolder/o/s $acg_plots_folder
 	newdatafolder/o/s $acg_rosePlot_folder
@@ -4201,19 +4225,19 @@ Function acg_wind_rose_by_index(start_i, stop_i, wDir, wParam, angleBinWidth, ca
 
 	make/o/n=(wsize) $(wname+"_wd")
 	wave wd = $(wname+"_wd")
-	
+
 	wd = wDir[p+start_i]
 	param = wParam[p+start_i]
-	
-	 //WMNewRosePlot(wd, param, radiusMax, angleBinWidth, calmSpeedBin, speedBinWidth, maxSpeed)	
+
+	 //WMNewRosePlot(wd, param, radiusMax, angleBinWidth, calmSpeedBin, speedBinWidth, maxSpeed)
 
 	acg_clean_plot_waves()
-	
+
 	setdatafolder sdf
 End
 
 function/S acg_get_next_plot_wave()
-	
+
 	variable i
 	for (i=0; i<100; i+=1)
 		string wname = "param_"+num2str(i)
@@ -4239,17 +4263,17 @@ Function/S pfw_get_marquee_menu_string()
 	if (acg_project_flag_is_set())
 		return pfw_get_keys()
 	endif
-	return ""		
+	return ""
 End
 
 Function pfw_set_flag_from_marquee()
 
 	GetLastUserMenuInfo
 	string key = S_value
-	
+
 //	GetMarquee/K/Z left, bottom
 	GetMarquee/K/Z bottom
-	
+
 //	GetWindow $S_marqueeWin wavelist
 //	wave/T wlist = W_WaveList
 //
@@ -4265,7 +4289,7 @@ Function pfw_set_flag_from_marquee()
 //			stopi = round(x2pnt(w,V_right))
 //			stopi = (stopi < 0) ? 0 : stopi
 //			stopi = (stopi > dimsize(w,0)) ? dimsize(w,0) : stopi
-//			print starti, stopi	
+//			print starti, stopi
 //			found = 1
 //			break
 //		elseif (stringmatch(wlist[i][0],"*datetime*")) // use the first wave with 'datetime' in the name
@@ -4279,19 +4303,19 @@ Function pfw_set_flag_from_marquee()
 //			found = 1
 //			break
 //		endif
-//	endfor	
-//	
+//	endfor
+//
 //	if (!found)
 //		// popup window for user to select dt wave
 //	endif
-//	
-	
+//
+
 	//acg_set_project_flag_range(start_dt,stop_dt,val)
 	//acg_set_project_flag_value(dt,val)
-	
+
 	pfw_set_range(V_left,V_right,key)
-	
-	
+
+
 	print S_value
 	print V_value
 End
@@ -4300,29 +4324,29 @@ Function pfw_set_range(start_dt,stop_dt,key)
 	variable start_dt
 	variable stop_dt
 	string key
-	
+
 	string sdf = acg_goto_ProjectFlag()
 	wave pfw = project_flag_wave
 
-	variable starti, stopi	
+	variable starti, stopi
 	starti = round(x2pnt(pfw,start_dt))
 	starti = (starti < 0) ? 0 : starti
 	starti = (starti > numpnts(pfw)) ? numpnts(pfw) : starti
 	stopi = round(x2pnt(pfw,stop_dt))
 	stopi = (stopi < 0) ? 0 : stopi
 	stopi = (stopi > numpnts(pfw)) ? numpnts(pfw) : stopi
-	//print starti, stopi	
-	
+	//print starti, stopi
+
 	variable val = pfw_get_value(key)
 	if (numtype(val) == 0)
 		pfw[starti,stopi] = val
 	endif
-	
-	
+
+
 End
 
 Function acg_project_flag_is_set()
-			
+
 	if (!acg_project_is_set())
 		// changed 05 Jan 2016 to reduce error messages generated when project info not set
 		//print "Project Info not set!"
@@ -4336,7 +4360,7 @@ Function acg_project_flag_is_set()
 		setdatafolder sdf
 		return 0
 	endif
-	
+
 	setdatafolder sdf
 	return 1
 End
@@ -4348,7 +4372,7 @@ Function/S acg_goto_ProjectFlag()
 	if (!datafolderexists(ProjectFlag_folder))
 		acg_init_ProjectFlag()
 	endif
-	
+
 	setdatafolder ProjectFlag_folder
 	return sdf
 End
@@ -4359,32 +4383,32 @@ Function acg_init_ProjectFlag()
 		print "Project Info not set!"
 		return 0
 	endif
-	
+
 	string sdf = acg_goto_ProjectInfo()
 	newdatafolder/o/s ProjectFlag
-	
+
 	// todo: allow users to add/remove custom flag names
 	string/G project_flag_list = PFW_base_string
 	string/G custom_flag_list = ""
-	
+
 	variable secs = acg_get_project_stop_dt() - acg_get_project_start_dt() + 1
 	make/D/o/n=(secs) project_datetime
 	wave pdt = project_datetime
 	pdt[0] = acg_get_project_start_dt()
 	pdt[1,] = pdt[p-1] + 1
-	
+
 	make/o/n=(secs) project_flag_wave // 1 second flag wave
 	wave pfw = project_flag_wave
 	SetScale/P x pdt[0],1,"dat", pfw
-	
+
 	pfw_set_metadata()
-	
+
 	//pfw = 0; //initialize to NORMAL
 	variable nf = pfw_get_value("AMBIENT")
 	pfw = nf
-		
+
 	setdatafolder sdf
-	
+
 End
 
 Function pfw_set_metadata()
@@ -4394,13 +4418,13 @@ Function pfw_set_metadata()
 
 	svar std_flags =  project_flag_list
 	svar custom_flags = custom_flag_list
-	
+
 	string sep = ";"
-	variable has_semicolon = 1 
+	variable has_semicolon = 1
 	if (cmpstr(std_flags[strlen(std_flags)-1],";")==0)
 		sep = ""
 	endif
-	
+
 	string flags = std_flags + sep + custom_flags
 	string flag_wn = ""
 	variable i;
@@ -4409,18 +4433,18 @@ Function pfw_set_metadata()
 		flag_wn = addlistitem(f+pfw_get_key_sep()+num2str(i),flag_wn,pfw_get_flag_sep(),9999)
 	endfor
 	wave fw = project_flag_wave
-	
+
 	string wn = note(fw)
 	wn = replacestringbykey("FLAGS",wn,flag_wn)
 	Note/K fw, wn
-	
-	
+
+
 	setdatafolder sdf
 
 End
 
 Function acg_has_project_flag()
-	
+
 End
 
 Function/S pfw_get_flag_sep()
@@ -4440,72 +4464,72 @@ Function pfw_add_custom_flag_panel()
 	if (V_Flag)
 		return -1
 	endif
-	
+
 	pfw_add_custom_flag(new_flag)
 
 End
 
 Function pfw_add_custom_flag(flag_key)
 	string flag_key
-	
+
 	string sdf = acg_goto_ProjectFlag()
 	SVAR list = custom_flag_list
-	
+
 	if (findlistitem(flag_key,list) < 0)
 		list = addlistitem(flag_key,list,";",9999)
 		pfw_set_metadata()
-	endif	
+	endif
 	return 0
-	
+
 	// skip this old stuff for now.
 	string keys = pfw_get_keys()
 	variable max_value = 0
-	
+
 	variable i
 	for (i=0; i<itemsinlist(keys); i+=1)
 		variable val = pfw_get_value(stringfromlist(i,keys))
 		max_value = ( val  >= max_value) ? val : max_value
 	endfor
-	max_value += 1 
+	max_value += 1
 	print max_value
-	
+
 	string new_flag = flag_key + ":" + num2str(max_value)
 
 	list = addlistitem(list,new_flag)
-	
+
 	setdatafolder sdf
 End
 
 Function/S pfw_get_keys()
-	
+
 	String keys = ""
 
 	string sdf = acg_goto_ProjectFlag()
 	//SVAR list = project_flag_list
-	
+
 	wave pfw = project_flag_wave
 	string list = stringbykey("FLAGS",note(pfw))
-	
+
 	variable i
 	for (i=0; i<itemsinlist(list,pfw_get_flag_sep()); i+=1)
 		string item = stringfromlist(i,list,pfw_get_flag_sep())
 		variable index = strsearch(item,pfw_get_key_sep(),0)
 		keys += item[0,index-1] + ";"
 	endfor
-	
+
 	setdatafolder sdf
-	
+
 	return keys
 End
 
 Function pfw_get_value(key)
 	string key
-	
+
 	string sdf = acg_goto_ProjectFlag()
 	//SVAR list = project_flag_list
 	wave pfw = project_flag_wave
 	string list = stringbykey("FLAGS",note(pfw))
-	
+
 	return NumberByKey(key,list,pfw_get_key_sep(),pfw_get_flag_sep())
 End
 
@@ -4513,14 +4537,14 @@ Function pfw_flag_is_set(key, start_dt, stop_dt)
 	string key
 	variable start_dt
 	variable stop_dt
-	
+
 	string sdf = acg_goto_ProjectFlag()
-	
+
 	wave flag = project_flag_wave
 	variable flag_val = pfw_get_value(key)
 
 	setdatafolder sdf
-	
+
 	variable single_pt = (start_dt == stop_dt) ? 1 : 0
 	if (single_pt)
 		return (flag_val == flag(start_dt))
@@ -4529,8 +4553,8 @@ Function pfw_flag_is_set(key, start_dt, stop_dt)
 		variable wmax = wavemax(flag,start_dt, stop_dt)
 		return ( (wmin==wmax) && (wmin == flag_val) )
 	endif
-	
-	return 0		
+
+	return 0
 
 End
 
@@ -4546,7 +4570,7 @@ Function pfw_filter_wave(src, flag_list,out_wname, use_full_delta, [dt, delta_ti
 	wave dt                         // datetime wave - if omitted, use w scaling (faster)
 	variable delta_time       // delta t in seconds - if omitted or 0, use dt values
 	string subfld		     // optional subfolder for output wave
-	 
+
 	variable start_dt = 0
 	variable stop_dt = 0
 	variable delta_t = 1
@@ -4554,30 +4578,30 @@ Function pfw_filter_wave(src, flag_list,out_wname, use_full_delta, [dt, delta_ti
 	if (ParamIsDefault(dt)) // dt scaling must be in X dim
 		start_dt = dimoffset(src,0)
 		delta_t = dimdelta(src,0)
-	else 
+	else
 		// calculate delta from dt wave
 		//start_dt = dt[0]
 		//delta_t = dt[1] - dt[0]
 		calc_delta = 1
 	endif
-	
+
 	variable num_dims = 1
 	num_dims = (dimsize(src,1)>0) ? 2 : num_dims
 	num_dims = (dimsize(src,2)>0) ? 3 : num_dims
 	num_dims = (dimsize(src,3)>0) ? 4 : num_dims
 	num_dims = (dimsize(src,4)>0) ? 5 : num_dims
-	
+
 	string sdf = acg_goto_ProjectFlag()
 	wave wflag = project_flag_wave
 	setdatafolder sdf
-	
+
 //	string dest_name = nameofwave(src)
 //	if (!replace_src)
 //		newdatafolder/o $flag_key
 //		duplicate/o src $(":" + flag_key + ":" + dest_name)
 //		dest_name = ":" + flag_key + ":" + dest_name
 //	endif
-	
+
 	string outname = out_wname
 	if ( !ParamIsDefault(subfld)  )
 		newdatafolder/o $subfld
@@ -4587,7 +4611,7 @@ Function pfw_filter_wave(src, flag_list,out_wname, use_full_delta, [dt, delta_ti
 //	wave w = $dest_name
 	wave w = $(outname)
 	w = NaN
-	
+
 	// set wavenote with src (name and path) and flag types using pfw_get_flag_sep()
 	string wn = note(w)
 	wn = replacestringbykey("NAME",wn,nameofwave(w))
@@ -4599,14 +4623,14 @@ Function pfw_filter_wave(src, flag_list,out_wname, use_full_delta, [dt, delta_ti
 	endfor
 	wn = replacestringbykey("FLAGS",wn,fstr)
 	Note w, wn
-	
+
 	variable ftype
 	for (ftype=0; ftype<itemsinlist(flag_list); ftype+=1)
 		string flag_key = stringfromlist(ftype, flag_list)
-		
+
 		variable i
 		variable dt1, dt2
-		for (i=0; i<dimsize(w,0); i+=1)		
+		for (i=0; i<dimsize(w,0); i+=1)
 			if (calc_delta)
 				start_dt = dt[i]
 				if ( !ParamIsDefault(delta_time) && (delta_time > 0) )
@@ -4614,15 +4638,15 @@ Function pfw_filter_wave(src, flag_list,out_wname, use_full_delta, [dt, delta_ti
 				else
 					stop_dt = dt[i+1]
 				endif
-			else 
+			else
 				start_dt = dimoffset(w,0)  + (i*dimdelta(w,0))
 				stop_dt = start_dt + delta_t
 			endif
-			
-			if (!use_full_delta)			
+
+			if (!use_full_delta)
 				stop_dt = start_dt
-			endif				
-				
+			endif
+
 			if (num_dims == 1) // 1d time series
 				w[i] = (pfw_flag_is_set(flag_key, start_dt, stop_dt)) ? src[i] : w[i]
 			elseif (num_dims == 2) // 2d time series
@@ -4632,7 +4656,7 @@ Function pfw_filter_wave(src, flag_list,out_wname, use_full_delta, [dt, delta_ti
 			endif
 		endfor
 
-	endfor 
+	endfor
 
 End
 
@@ -4644,7 +4668,7 @@ Function acg_shorten_wave_names(fromString,toString)
 	set_base_path()
 	PathInfo loaddata_base_path
 	//print "base_path  = " S_path
-//	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path 
+//	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path
 
 	Variable refNum
 	String message = "Select one or more files"
@@ -4654,10 +4678,10 @@ Function acg_shorten_wave_names(fromString,toString)
 
 	Open /D /R /MULT=1 /F=fileFilters /M=message /P=loaddata_base_path refNum
 	outputPaths = S_fileName
-	
+
 	string sdf = getdatafolder(1)
 	newdatafolder/o/s root:tmp_shorten
-			
+
 	if (strlen(outputPaths) == 0)
 		Print "Cancelled"
 	else
@@ -4665,34 +4689,34 @@ Function acg_shorten_wave_names(fromString,toString)
 		Variable i
 		for(i=0; i<numFilesSelected; i+=1)
 			String path = StringFromList(i, outputPaths, "\r")
-			Printf "Loading %d: %s\r", i, path	
+			Printf "Loading %d: %s\r", i, path
 
 			// load itx file
 			LoadWave/T/O path
 
-			// get wavelist 
+			// get wavelist
 			string wlist=acg_get_wave_list()
-			
+
 			variable j
 			for (j=0; j<itemsinlist(wlist); j+=1)
 				string oldName = stringfromlist(j,wlist)
 				string newName = ReplaceString(fromString, oldName, toString)
-			
+
 				if (cmpstr(oldName,newName) != 0)
 					Rename $oldName, $newName
 				endif
-						
+
 			endfor
-			
-			wlist=acg_get_wave_list()			
-			string short_path = ReplaceString(".itx", path, "_short.itx")			
+
+			wlist=acg_get_wave_list()
+			string short_path = ReplaceString(".itx", path, "_short.itx")
 			Printf "Saving %d: %s\r",i,short_path
-			Save/T/B wlist as short_path			
-			killwaves/A			
+			Save/T/B wlist as short_path
+			killwaves/A
 		endfor
 	endif
 	//LoadWave/T/O/P=loaddata_base_path
-	
+
 	// set back to original datafolder
 	setdatafolder sdf
 
@@ -4701,13 +4725,13 @@ End
 
 Function acg_load_dchart_itx_format(tb)
 	variable tb
-	
+
 	acg_init_gui()
-	 
+
 	set_base_path()
 	PathInfo loaddata_base_path
 	//print "base_path  = " S_path
-//	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path 
+//	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path
 
 	Variable refNum
 	String message = "Select one or more files"
@@ -4717,33 +4741,33 @@ Function acg_load_dchart_itx_format(tb)
 
 	Open /D /R /MULT=1 /F=fileFilters /M=message /P=loaddata_base_path refNum
 	outputPaths = S_fileName
-	
-	if (tb < 1) 
+
+	if (tb < 1)
 		// show dialog asking for user to supply tb
 	endif
-	
+
 	// Get current folder as destination folder
 	string sdf = getdatafolder(1)
-	
-	string new_df = sdf[0,strlen(sdf)-2] // remove trailing ":" 
-	
+
+	string new_df = sdf[0,strlen(sdf)-2] // remove trailing ":"
+
 	// temporarily replace load_datafolder_list and load_datafolder_index values in root:gui
 	nvar dfIndex = root:gui:load_datafolder_index
 	svar dfolder_list = root:gui:load_datafolder_list
 	nvar last_tb = root:gui:last_timebase
-	
+
 	variable bak_index = dfIndex
 	dfIndex = 0
 	string bak_list = dfolder_list
 	dfolder_list = new_df
-	
+
 	last_tb = tb
-	
+
 	// create and set current data folder to a $(acg_tmp_concat_folder+":input")
 	newdatafolder/o/s $acg_tmp_concat_folder
 	newdatafolder/o/s input
 
-	
+
 	if (strlen(outputPaths) == 0)
 		Print "Cancelled"
 	else
@@ -4751,7 +4775,7 @@ Function acg_load_dchart_itx_format(tb)
 		Variable i
 		for(i=0; i<numFilesSelected; i+=1)
 			String path = StringFromList(i, outputPaths, "\r")
-			//Printf "%d: %s\r", i, path	
+			//Printf "%d: %s\r", i, path
 
 			// load itx file
 			LoadWave/T/O path
@@ -4766,26 +4790,26 @@ Function acg_load_dchart_itx_format(tb)
 		endfor
 	endif
 	//LoadWave/T/O/P=loaddata_base_path
-	
+
 	// reset load_datafolder_list and load_datafolder_index values in root:gui
 	dfIndex = bak_index
 	dfolder_list = bak_list
 
 	// set back to original datafolder
 	setdatafolder sdf
-	
+
 End
 
 Function acg_load_dgfetch_format(tb)
 	variable tb
-	 
+
 	set_base_path()
 	PathInfo loaddata_base_path
 	//print "base_path  = " S_path
-//	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path 
+//	LoadWave/J/D/A/W/O/K=0/L={0,2,0,0,0}/R={English,2,2,2,2,"Year-Month-DayOfMonth",40}/P=loaddata_base_path
 
 	acg_init_gui()
-	
+
 	Variable refNum
 	String message = "Select one or more files"
 	String outputPaths
@@ -4794,33 +4818,33 @@ Function acg_load_dgfetch_format(tb)
 
 	Open /D /R /MULT=1 /F=fileFilters /M=message /P=loaddata_base_path refNum
 	outputPaths = S_fileName
-	
-	if (tb < 1) 
+
+	if (tb < 1)
 		// show dialog asking for user to supply tb
 	endif
-	
+
 	// Get current folder as destination folder
 	string sdf = getdatafolder(1)
-	
-	string new_df = sdf[0,strlen(sdf)-2] // remove trailing ":" 
-	
+
+	string new_df = sdf[0,strlen(sdf)-2] // remove trailing ":"
+
 	// temporarily replace load_datafolder_list and load_datafolder_index values in root:gui
 	nvar dfIndex = root:gui:load_datafolder_index
 	svar dfolder_list = root:gui:load_datafolder_list
 	nvar last_tb = root:gui:last_timebase
-	
+
 	variable bak_index = dfIndex
 	dfIndex = 0
 	string bak_list = dfolder_list
 	dfolder_list = new_df
-	
+
 	last_tb = tb
-	
+
 	// create and set current data folder to a $(acg_tmp_concat_folder+":input")
 	newdatafolder/o/s $acg_tmp_concat_folder
 	newdatafolder/o/s input
 
-	
+
 	if (strlen(outputPaths) == 0)
 		Print "Cancelled"
 	else
@@ -4828,7 +4852,7 @@ Function acg_load_dgfetch_format(tb)
 		Variable i
 		for(i=0; i<numFilesSelected; i+=1)
 			String path = StringFromList(i, outputPaths, "\r")
-			//Printf "%d: %s\r", i, path	
+			//Printf "%d: %s\r", i, path
 
 //			// load itx file
 //			LoadWave/T/O path
@@ -4845,106 +4869,106 @@ Function acg_load_dgfetch_format(tb)
 		endfor
 	endif
 	//LoadWave/T/O/P=loaddata_base_path
-	
+
 	// reset load_datafolder_list and load_datafolder_index values in root:gui
 	dfIndex = bak_index
 	dfolder_list = bak_list
 
 	// set back to original datafolder
 	setdatafolder sdf
-	
+
 End
 
 Function acg_create_destFolder(destFolder)
 	string destFolder
-	
+
 	string sdf = getdatafolder(1)
 	setdatafolder root:
-	
+
 	variable i, starti
 	starti = (cmpstr("root",stringfromlist(0,destFolder,":")) == 0) ? 1 : 0
 	for (i=starti; i<itemsinlist(destFolder,":"); i+=1)
 		newdatafolder/o/s $stringfromlist(i,destFolder,":")
 	endfor
-	
+
 	setdatafolder sdf
 
 End
 
 Function/S acg_get_destFolder_from_list(index)
 	variable index
-	
+
 	nvar dfIndex = root:gui:load_datafolder_index
 	svar dfolder_list = root:gui:load_datafolder_list
-	
+
 	string destFolder = stringfromlist(dfindex,dfolder_list)
-	if (cmpstr("root",stringfromlist(0,destFolder,":")) != 0) 
+	if (cmpstr("root",stringfromlist(0,destFolder,":")) != 0)
 		destFolder = "root:"+destFolder
 	endif
 
 	return destFolder
-	
+
 End
 
 Function wv_export_wind_vector()
-	
+
 	string sdf = getdatafolder(1)
 	setdatafolder wv_datafolder
-	
+
 	SaveData/O/I/R
-	
+
 	setdatafolder sdf
 
 End
 
 Function wv_import_wind_vector()
-	
+
 	string sdf = getdatafolder(1)
 	setdatafolder root:
-	
+
 	LoadData/I/O/T/R
-	
+
 	setdatafolder sdf
-	
+
 End
 
 Function wv_create_base_waves(lat,lon,dt,ws,wd)  // tb = 60sec
 	wave lat,lon,dt
-	wave ws // wind speed (m/s) 
+	wave ws // wind speed (m/s)
 	wave wd // wind direction (deg, 0=N, 90=E)
-	
+
 	newdatafolder/o/s $wv_datafolder
-	
+
 	duplicate/o lat latitude
 	duplicate/o lon longitude
 	duplicate/o dt wv_datetime
-	
+
 	make/o/n=(numpnts(dt),2) wind_arrow_base
 	wave arrow_base = wind_arrow_base
 	make/o/n=(numpnts(dt),3) wind_barb_base
 	wave barb_base = wind_barb_base
-	
+
 	// set wind speeds
 	arrow_base[][0] = ws[p]
 	barb_base[][0] = ws[p]
-	
+
 	// set barb speed in knots
 	barb_base[][2] = round(ws[p]*1.94386)
-	
+
 	// set wind direction - need to transform from degrees (0=N clockwise) to radians (0=E counterclockwise)
 	//    for arrows - point with the wind
 	arrow_base[][1] = ( (90-wd[p]) < 0) ? ( (90-wd[p])+360 )*PI/180 : (90-wd[p])*PI/180
 	//windD_radians = (90-root:winds:common_tb_60:project_tb_60:WindD[p] < 0) ? ((90-root:winds:common_tb_60:project_tb_60:WindD[p])+360)*PI/180 : (90-root:winds:common_tb_60:project_tb_60:WindD[p])*PI/180
-	
+
 	// for barbs - point into the wind
 	duplicate/o wd wd_barb
 	wd_barb = ( (wd[p] + 180) > 360 ) ?  (wd[p] + 180) - 360 : (wd[p] + 180)
 	barb_base[][1] = ( (90-wd_barb[p]) < 0) ? ( (90-wd_barb[p])+360 )*PI/180 : (90-wd_barb[p])*PI/180
-	
+
 	setdimlabel 1,2,windBarb,wind_barb_base
-	
+
 	killwaves/Z wd_barb
-	
+
 End
 
 Function wv_create_plotwaves(type,[id,start_idx,stop_idx])
@@ -4961,7 +4985,7 @@ Function wv_create_plotwaves(type,[id,start_idx,stop_idx])
 		print "id=base is not allowed"
 		return 0
 	endif
-	
+
 	string sdf = getdatafolder(1)
 	setdatafolder wv_datafolder
 
@@ -4991,18 +5015,18 @@ Function wv_create_plotwaves(type,[id,start_idx,stop_idx])
 	if (!waveexists($paramname))
 		make/n=6 $paramname
 		wave par = $paramname
-		
+
 		//set defaults
-		par[0] = 1.0 
-		par[1] = 5     
+		par[0] = 1.0
+		par[1] = 5
 		par[2] = 0
 		par[3] = numpnts(dt) -1
 	endif
-	
+
 	wave par = $paramname
-		
+
 	if (!ParamIsDefault(start_idx))
-		par[2] = start_idx 
+		par[2] = start_idx
 	endif
 
 	if (!ParamIsDefault(stop_idx))
@@ -5012,20 +5036,20 @@ Function wv_create_plotwaves(type,[id,start_idx,stop_idx])
 	wave base = $basename
 	duplicate/o base $destname
 	wave dest = $destname
-	dest = NaN	
-	
+	dest = NaN
+
 	variable i
 	for (i=par[2]; i<=par[3]; i+=par[1])
-		
+
 		//variable dest_idx = i-par[2]
 		// scale wind speed (but not for barb data)
 		dest[i][0] = base[i][0]*par[0]
-		
+
 		dest[i][1,] = base[i][q]
-	
+
 	endfor
-	
-	setdatafolder sdf  
+
+	setdatafolder sdf
 
 End
 
@@ -5033,18 +5057,18 @@ Function wv_spacing(type,everyNmins,[id])
 	string type // "arrow", "barb"
 	variable everyNmins // 5 = one vector every 5 minutes
 	string id
-	
+
 	if (ParamIsDefault(id))
 		id = ""
 	endif
-		
+
 	if (cmpstr(id, "base")==0) // can't use this
 		print "id=base is not allowed"
 		return 0
 	endif
-	
+
 	string sdf = getdatafolder(1)
-	setdatafolder wv_datafolder	
+	setdatafolder wv_datafolder
 
 	string paramname = ""
 	if (cmpstr(type,"arrow")==0)
@@ -5058,18 +5082,18 @@ Function wv_spacing(type,everyNmins,[id])
 	if (!waveexists($paramname))
 		make/n=6 $paramname
 		wave par = $paramname
-		
+
 		//set defaults
 		par[0] = 1.0  // wind speed scaling factor - speeds < 3 default to marker for arrows
 		par[1] = everyNmins     // spacing every N minutes along track
 		par[2] = 0
 		par[3] = numpnts(dt) -1
-	
+
 	else
 		wave par = $paramname
 		par[1] = everyNmins
 	endif
-		
+
 	wv_create_plotwaves(type,id=id)
 End
 
@@ -5077,18 +5101,18 @@ Function wv_scaling(type,speed_scale_factor,[id])
 	string type // "arrow", "barb"
 	variable speed_scale_factor // multiplier for wind speed (anything less than 3 defaults to marker for arrow)
 	string id
-	
+
 	if (ParamIsDefault(id))
 		id = ""
 	endif
-		
+
 	if (cmpstr(id, "base")==0) // can't use this
 		print "id=base is not allowed"
 		return 0
 	endif
-	
+
 	string sdf = getdatafolder(1)
-	setdatafolder wv_datafolder	
+	setdatafolder wv_datafolder
 
 	string paramname = ""
 	if (cmpstr(type,"arrow")==0)
@@ -5102,38 +5126,38 @@ Function wv_scaling(type,speed_scale_factor,[id])
 	if (!waveexists($paramname))
 		make/n=6 $paramname
 		wave par = $paramname
-		
+
 		//set defaults
 		par[0] = speed_scale_factor // wind speed scaling factor - speeds < 3 default to marker for arrows
 		par[1] = 5     // spacing every N minutes along track
 		par[2] = 0
 		par[3] = numpnts(dt) -1
-	
+
 	else
 		wave par = $paramname
 		par[0] = speed_scale_factor
 	endif
-		
+
 	wv_create_plotwaves(type,id=id)
-	
+
 End
 
 Function wv_mask(type,start_idx,stop_idx,[id])
 	string type // "arrow", "barb"
 	variable start_idx,stop_idx // multiplier for wind speed (anything less than 3 defaults to marker for arrow)
 	string id
-	
+
 	if (ParamIsDefault(id))
 		id = ""
 	endif
-		
+
 	if (cmpstr(id, "base")==0) // can't use this
 		print "id=base is not allowed"
 		return 0
 	endif
-	
+
 	string sdf = getdatafolder(1)
-	setdatafolder wv_datafolder	
+	setdatafolder wv_datafolder
 
 	string paramname = ""
 	if (cmpstr(type,"arrow")==0)
@@ -5147,26 +5171,26 @@ Function wv_mask(type,start_idx,stop_idx,[id])
 	if (!waveexists($paramname))
 		make/n=6 $paramname
 		wave par = $paramname
-		
+
 		//set defaults
 		par[0] = 1 // wind speed scaling factor - speeds < 3 default to marker for arrows
 		par[1] = 5     // spacing every N minutes along track
 		par[2] = start_idx
 		par[3] = stop_idx
-	
+
 	else
 		wave par = $paramname
 		par[2] = start_idx
 		par[3] = stop_idx
 	endif
-		
+
 	wv_create_plotwaves(type,id=id)
-	
+
 End
 
 // acg_interp_nan_gap:
-//	generate interpolated wave from xdata and ydata at points in data. The function is 
-//	designed to interp across gaps filled with NaN values. Interpolated wave will be named 
+//	generate interpolated wave from xdata and ydata at points in data. The function is
+//	designed to interp across gaps filled with NaN values. Interpolated wave will be named
 // 	as specified by outw_name
 Function acg_interp_nan_gap(ydata, outw_name,[xdata, new_xdata])
 	wave ydata     // y-wave of data
@@ -5174,7 +5198,7 @@ Function acg_interp_nan_gap(ydata, outw_name,[xdata, new_xdata])
 	// *** OPTIONAL ***
 	wave xdata     // x-wave of data...needed if ywave is not scaled with xwave
 	wave new_xdata   // contains points at which you want to interpolate if different than xwave
-	
+
 	variable calc_xdata=0
 	if (ParamIsDefault(xdata))
 		// check to make sure ywave is scaled
@@ -5184,7 +5208,7 @@ Function acg_interp_nan_gap(ydata, outw_name,[xdata, new_xdata])
 		 endif
 		 calc_xdata = 1
 	endif
-	
+
 	string xdata_name = ""
 	if (calc_xdata)
 		xdata_name = "ing_tmp_xdata_w"
@@ -5196,26 +5220,26 @@ Function acg_interp_nan_gap(ydata, outw_name,[xdata, new_xdata])
 		xdata_name = nameofwave(xdata)
 	endif
 	wave xdata = $xdata_name
-	
+
 	string new_xdata_name = nameofwave(xdata)
 	if (!ParamIsDefault(new_xdata))
 		 new_xdata_name = nameofwave(new_xdata)
 	endif
-	wave data = $new_xdata_name				
-			
+	wave data = $new_xdata_name
+
 	variable wtype = numberbykey("NUMTYPE",waveinfo(ydata,0))
 	make/o/Y=(wtype)/n=(numpnts(data)) $outw_name
 	//duplicate/o data, $outw_name
 	wave w = $outw_name
 	w=nan
-	
+
 	if (calc_xdata)
 		SetScale/P x dimoffset(ydata,0),dimdelta(ydata,0),waveunits(ydata,0) w
 	endif
-	
+
 	duplicate/o xdata, tmp_xdata
 	wave xw = tmp_xdata
-	
+
 	duplicate/o ydata, tmp_ydata
 	wave yw = tmp_ydata
 
@@ -5228,24 +5252,24 @@ Function acg_interp_nan_gap(ydata, outw_name,[xdata, new_xdata])
 			Deletepoints idex, 1, yw, xw
 			count = numpnts( xw )
 		else
-			idex += 1	
+			idex += 1
 		endif
 	while( idex < count )
-	
+
 	w = (data[p] >= xw[0] && data[p] <= xw[numpnts(xw)-1]) ? interp(data[p], xw, yw) : NaN
-	
+
 	Killwaves/Z xw, yw
 
-End 
+End
 
 Function test_interp()
 
 	make/o/n=100 test_data
 	make/o/d/n=100 test_time
-	
+
 	wave data = test_data
 	wave dt = test_time
-	
+
 	dt[0] = date2secs(2013,04,15)
 	dt[1,] = dt[p-1]+1
 
@@ -5253,17 +5277,17 @@ Function test_interp()
 	wave dt2 = test_time2
 	dt2[0] = date2secs(2013,04,14) + 23*60*60+59*60
 	dt2[1,] = dt2[p-1]+1
-		
+
 	variable i
 	for (i=0; i<100;i+=1)
 		data[i] = gnoise(10)
 	endfor
-	
+
 	data[5,20] = NaN
 	data[25,40] = NaN
 	data[45,60] = NaN
 	data[65,90] = NaN
-	
+
 	SetScale/P x dt[0],1,"dat", data
 
 	acg_interp_nan_gap(data, "test_interp_ng")
@@ -5283,15 +5307,15 @@ Function acg_wn_set_note_with_key(w,key,msg)
 	wave w
 	string key
 	string msg
-	
+
 	string orig = note(w)
 	string new = ReplaceStringByKey(key,orig,msg)
 	Note/K w, new
-End	
+End
 
 Function/WAVE acg_extract_dt(src)
 	wave src
-	
+
 	string info = waveinfo(src,0)
 	if (cmpstr(stringbykey("XUNITS",info),"dat")==0)
 		variable size = dimsize(src,0)
@@ -5300,15 +5324,15 @@ Function/WAVE acg_extract_dt(src)
 
 		make/D/o/n=(size) $(nameofwave(src)+"_dt")
 		wave dt = $(nameofwave(src)+"_dt")
-		
+
 		dt[0] = first_dt
 		dt[1,] = dt[p-1] + delta_dt
-		
+
 		return dt
 	else
 		return null
 	endif
-//	
+//
 //	print info
 //	print dimdelta(src,0)
 //	print dimoffset(src,0)
@@ -5319,11 +5343,11 @@ Function acg_kill_all_graphs()
 	string fulllist = WinList("*", ";","WIN:1")
     	string name, cmd
     	variable i
-   
+
   	  for(i=0; i<itemsinlist(fulllist); i +=1)
       		  name= stringfromlist(i, fulllist)
       	  	sprintf  cmd, "Dowindow/K %s", name
       	  	print cmd
-        	execute cmd    
+        	execute cmd
         endfor
 End
