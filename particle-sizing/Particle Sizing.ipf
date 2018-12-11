@@ -6233,8 +6233,8 @@ Function sizing_write_nsd()
 //	NewPath/O/Q save_path_filter, "Y:Data:Cruises:wacs2:sizing:dmps:final_data"
 //	NewPath/O/Q save_path, "Y:Data:Cruises:naames:Leg1:sizing:dmps:final_data"
 //	NewPath/O/Q save_path_filter, "Y:Data:Cruises:naames:Leg1:sizing:dmps:final_data"
-	NewPath/O/Q save_path, "Y:Data:Cruises:naames:Leg2:sizing:dmps:final_data"
-	NewPath/O/Q save_path_filter, "Y:Data:Cruises:naames:Leg2:sizing:dmps:final_data"
+	NewPath/O/Q save_path, "Y:Data:Cruises:naames:Leg4:sizing:dmps:final_data"
+	NewPath/O/Q save_path_filter, "Y:Data:Cruises:naames:Leg4:sizing:dmps:final_data"
 
 	variable refNum
 	string id_str, version_str,dist_type
@@ -6262,7 +6262,7 @@ Function sizing_write_nsd()
 	//string fileName_base = "UBWOS2013_"
 	//string fileName_base = "WACS2_"
 	//string fileName_base = "NAAMES_"
-	string fileName_base = "NAAMES2_"
+	string fileName_base = "NAAMES4_"
 
 	variable useVersionString = 1
 	variable useProjectInfo = 1
@@ -6272,16 +6272,16 @@ Function sizing_write_nsd()
 if (1)
 	// Section: dmps_dNdlogDp
 	// ------ make changes here ------ //
-	inst = "dmps_aps"
+	inst = "dmps"
 	tb = tb_value
 	dist_type = "nsd"
-	id_str = "dmps_aps"
+	id_str = "dmps"
 	version_str = "0"
 	isFilter = 0
 	isAmbient = 0
 	//dw_name = "dNdlogDp_2d_seasweep"
-	dw_name = "dNdlogDp_2d"
-	//dw_name = "dNdlogDp"
+	//dw_name = "dNdlogDp_2d"
+	dw_name = "dNdlogDp"
 	//dw_name = "dNdlogDp_SeaSweep"
 	
 	// add lat, lon to file
@@ -8467,3 +8467,154 @@ endif
 	
 	setdatafolder sdf
 End	
+
+
+Function sizing_cor_dmps_w_smps(dmps_tb, smps_tb)
+	//string inst = "dmps"
+	variable dmps_tb
+	variable smps_tb
+
+	variable isFilter = 0 // default for now
+
+	string sdf = getdatafolder(1)
+	//setdatafolder root:$(inst):$("data_"+num2str(tb)+"sec")
+
+	// get smps waves
+	string inst = "smps"
+	if (isFilter)
+		setdatafolder root:$(inst):$("data_"+num2str(smps_tb)+"sec"):filter
+	else
+		setdatafolder root:$(inst):$("data_"+num2str(smps_tb)+"sec")
+	endif
+
+	wave smps_dt = smps_datetime
+	wave smps_dp = smps_dp_um
+	wave smps = :UNHEATED:smps_dNdlogDp_dmps
+	
+	// go to dmps folder
+	inst = "dmps"
+	if (isFilter)
+		setdatafolder root:$(inst):$("data_"+num2str(dmps_tb)+"sec"):filter
+	else
+		setdatafolder root:$(inst):$("data_"+num2str(dmps_tb)+"sec")
+	endif
+	
+	wave dmps_dt = dmps_datetime
+	wave dmps_dp = dmps_dp_um
+	wave dmps_orig = dmps_dNdlogDp_orig
+	duplicate/o dmps_orig dmps_dNdlogDp
+	wave dmps = dmps_dNdlogDp
+	
+	wave aps = root:aps:data_300sec:aps_dNdlogDp
+
+	make/o/n=(dimsize(dmps,1)) tmp_dmps_dNdlogDp
+	wave tmp_dmps = tmp_dmps_dNdlogDp
+
+	make/o/n=(dimsize(smps,1)) tmp_smps_dNdlogDp
+	wave tmp_smps = tmp_smps_dNdlogDp
+
+	variable row, col
+	for (row=0; row<dimsize(dmps,0); row+=1)
+		tmp_smps = smps[row][p]
+		wavestats/Q tmp_smps
+		variable smps_pnts = V_npnts
+		
+		tmp_dmps = dmps[row][p]
+		wavestats/Q tmp_dmps
+		variable dmps_pnts = V_npnts
+		
+		if (row == 1663)
+			print "here"
+		endif
+		
+		if ( smps_pnts == 0 || dmps_pnts==0 )
+			dmps[row][] = NaN
+			aps[row][] = NaN
+			continue
+		endif
+		
+		for (col=0; col<dimsize(dmps,1); col+=1)
+			variable dp = dmps_dp[col]
+			if (dp <= smps_dp[numpnts(smps_dp)-1])
+				dmps[row][col] = interp(dp, smps_dp, tmp_smps)
+			else
+				dmps[row][col] = dmps_orig[row][col]
+			endif
+		endfor
+		
+	endfor	
+
+	//interp
+	killwaves/Z tmp_dmps, tmp_smps
+	
+	variable dmps_timebase = dmps_defaultTimeBase
+	convert_NtoSVM("dmps",dmps_timebase,0)
+	integrate_NSVM("dmps",dmps_timebase,0)	
+	create_im_plot_params("dmps",dmps_timebase,0)
+
+	convert_NtoSVM("aps",dmps_timebase,0)
+	integrate_NSVM("aps",dmps_timebase,0)	
+	create_im_plot_params("aps",dmps_timebase,0)
+
+	setdatafolder sdf
+End
+
+Function sizing_smps_to_dmps_tb(dmps_tb, smps_tb)
+	variable dmps_tb
+	variable smps_tb
+	
+	variable isFilter = 0 // default for now
+
+	string sdf = getdatafolder(1)
+	//setdatafolder root:$(inst):$("data_"+num2str(tb)+"sec")
+
+	// get dmps waves
+	string inst = "dmps"
+	if (isFilter)
+		setdatafolder root:$(inst):$("data_"+num2str(dmps_tb)+"sec"):filter
+	else
+		setdatafolder root:$(inst):$("data_"+num2str(dmps_tb)+"sec")
+	endif
+
+	wave dmps_dt = dmps_datetime
+	//wave dmps_dp = dmps_dp_um
+	//wave dmps_orig = dmps_dNdlogDp_orig
+
+	// go to smps folder
+	inst = "smps"
+	if (isFilter)
+		setdatafolder root:$(inst):$("data_"+num2str(smps_tb)+"sec"):filter
+	else
+		setdatafolder root:$(inst):$("data_"+num2str(smps_tb)+"sec")
+	endif
+
+	wave smps_dt = smps_datetime
+	wave smps_dp = smps_dp_um
+	wave smps = :UNHEATED:smps_dNdlogDp
+	make/o/n=(numpnts(dmps_dt),dimsize(smps,1)) $":UNHEATED:smps_dNdlogDp_dmps"
+	wave smps_dmps = $":UNHEATED:smps_dNdlogDp_dmps"
+
+	variable row
+	for (row=0; row<numpnts(dmps_dt); row+=1)
+
+		make/o/n=1 start_datetime_tmp
+		wave start_dt = start_datetime_tmp
+		start_dt[0] = dmps_dt[row]
+		
+		make/o/n=1 stop_datetime_tmp
+		wave stop_dt = stop_datetime_tmp
+		stop_dt[0] = dmps_dt[row] + dmps_tb
+		
+		acg_avg_using_time_index_2d(start_dt, stop_dt, smps_dt, smps, "tmp_smps")
+		wave tmp = $"tmp_smps"
+		
+		variable col
+		for (col=0; col<dimsize(smps_dmps,1); col+=1)
+			smps_dmps[row][col] = tmp[0][col]
+		endfor
+	endfor
+	
+	killwaves/Z start_dt, stop_dt, tmp
+	
+	setdatafolder sdf	
+End
