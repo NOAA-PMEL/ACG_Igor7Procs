@@ -800,8 +800,9 @@ End
 Function/WAVE db_create_entry(start_dt,stop_dt)
 	variable start_dt
 	variable stop_dt
-
-	make/o/n=3 db_entry
+	
+	// Changed to make wave double precision for times
+	make/D/o/n=3 db_entry
 	wave entry = db_entry
 	entry[0] = -1           // unknown id - needs to be computed
 	entry[1] = start_dt
@@ -2150,10 +2151,11 @@ Function db_app_fit_sizedist_data([datasource,dataset])
 
 End
 
-Function db_plot_fit_by_index(ds_index,[datasource,dataset])
+Function db_plot_fit_by_index(ds_index,[datasource,dataset,add_labels])
 	variable ds_index
 	string datasource
 	string dataset
+	string add_labels
 	
 	string APP_SIGNATURE = "fit_size_dist"
 	string app_long_name = "Fit size distributions"
@@ -2161,6 +2163,10 @@ Function db_plot_fit_by_index(ds_index,[datasource,dataset])
 //	db_register_app(APP_SIGNATURE,app_long_name,"db_app_fit_sizedist_data([datasource,dataset])")
 	
 	string sdf = getdatafolder(1)
+	
+	if (ParamIsDefault(add_labels))
+		add_labels = "false"
+	endif
 	
 	if (ParamIsDefault(dataset))
 		dataset = db_get_active_ds()
@@ -2287,7 +2293,7 @@ Function db_plot_fit_by_index(ds_index,[datasource,dataset])
 	fd_data.fit_par_name = getwavesdatafolder(fit_par,2)
 	
 //	db_update_appdata_fit_dist(fd_data)
-	db_plot_fit(ds_index, fd_data)
+	db_plot_fit(ds_index, fd_data,add_labels=add_labels)
 
 	// show window
 //	 db_app_fit_size_dist_gui()
@@ -2297,10 +2303,15 @@ Function db_plot_fit_by_index(ds_index,[datasource,dataset])
 	setdatafolder sdf
 End
 
-Function db_plot_fit(index, fd_data)
+Function db_plot_fit(index, fd_data,[add_labels])
 	variable index
 	STRUCT AppData_fit_dist &fd_data
+	string add_labels 
 
+	if (ParamIsDefault(add_labels))
+		add_labels = "false"
+	endif
+	
 	newdatafolder/o/s :plots
 	newdatafolder/o/s $(":index_"+num2str(index))
 	
@@ -3241,4 +3252,39 @@ Function db_app_find_kappa([datasource,dataset])
 	 
 	 killwaves/Z ids
 
+End
+
+// QUICK AND DIRTY
+// Need be in working folder
+Function dev_average_by_index_list(data,index_list,out_name)
+	wave data
+	string index_list
+	string out_name
+	
+	wave w = data
+	variable rows = dimsize(w,0)
+	variable cols = dimsize(w,1)
+	
+	newdatafolder/o/s :averages
+	make/o/n=(cols) $out_name
+	wave out = $out_name
+	setdatafolder ::
+	
+	make/o/n=(itemsinlist(index_list)) tmp_wave
+	wave tmp = tmp_wave
+	variable coli
+	for (coli=0; coli<cols; coli+=1)
+		tmp = NaN
+		
+		variable listi
+		for (listi=0; listi<itemsinlist(index_list); listi+=1)
+			variable index = str2num(stringfromlist(listi,index_list))
+			tmp[listi] = w[index-1][coli]
+		endfor
+		
+		wavestats/Q tmp
+		out[coli] = V_avg
+	endfor
+			
+	killwaves/Z tmp
 End
