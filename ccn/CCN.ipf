@@ -110,8 +110,11 @@ strconstant ccn_mono_ss_list= "0.1;0.11;0.12;0.13;0.14;0.15;0.16;0.17;0.18;0.19;
 //strconstant ccn_samp_type_list_old ="AMBIENT;SEASWEEP;STATION_1;STATION_2;Denuder;AmSulf;NaCl;Station_2_SW;SS_Large_Frits;SS_Small_Frits;AMBIENT_1;AMBIENT_2;Denuder_2;STATION_3;STATION_4;ST_4_Denuder;AMBIENT_3;Spectra_Denuder;Spectra_Ambient;SP_Denuder_2;AMBIENT_4;SP_AMB_UH_5;SP_AMB_H_5;SP_AmSulf_UH;SP_NaCl_UH;SS_5_UH;SS_5_H;NaCl_H;AmmSulf_H;St5_SW_H;St5_SW_UH;DENUDER_4" // WACS
 //strconstant ccn_samp_type_list_new ="SEA_SWEEP_1;AMB_5_24;SEA_SWEEP_2;AMB_5_25_H;SEA_SWEEP_2_SF;AmmSulf;NaCl;STATION_2_SW;AMB_5_29_H;SEA_SWEEP_3;AMB_5_31;AMB_5_31_H;SEA_SWEEP_4;SEA_SWEEP_4_H;AMB_6_2;AMB_6_3;AMB_6_3_H;AMB_6_4_H;SEA_SWEEP_5;SEA_SWEEP_5_H;STATION_5_SW;AMB_5_20;AMB_5_21;AMB_5_25;AMB_5_29;AMB_6_4;NaCl_H;AmmSulf_H" 
 
-strconstant ccn_samp_type_list ="SS_1;SS_2;MART_tr_907;SS_3;MART_st_3;AS_cal_909;NaCl_cal_909;SS_4_1;MART_st_4;SS_4_2;SS_4_3;Mart_tr_910;MART_st_6_1;MART_st_6_2;MART_st_6_3;SS_6_1;MART_st_6_4;SW_st1_905_130L;ML_st1_905_100L;ML_st5_912_600L;SW_st5_912_215L;MART_tr_919N;MART_tr_919D;SS_6_2"//NAAMES 3 calibration & Seasweep
-strconstant ccn_samp_type_list_new ="SS_1;SS_2;MART_tr_907;SS_3;MART_st_3;AS_cal_909;NaCl_cal_909;SS_4_1;MART_st_4;SS_4_2;SS_4_3;Mart_tr_910;MART_st_6_1;MART_st_6_2;MART_st_6_3;SS_6_1;MART_st_6_4;SW_st1_905_130L;ML_st1_905_100L;ML_st5_912_600L;SW_st5_912_215L;MART_tr_919N;MART_tr_919D;SS_6_2"//NAAMES 3 calibration & Seasweep
+//strconstant ccn_samp_type_list ="SS_1;SS_2;MART_tr_907;SS_3;MART_st_3;AS_cal_909;NaCl_cal_909;SS_4_1;MART_st_4;SS_4_2;SS_4_3;Mart_tr_910;MART_st_6_1;MART_st_6_2;MART_st_6_3;SS_6_1;MART_st_6_4;SW_st1_905_130L;ML_st1_905_100L;ML_st5_912_600L;SW_st5_912_215L;MART_tr_919N;MART_tr_919D;SS_6_2"//NAAMES 3 calibration & Seasweep
+//strconstant ccn_samp_type_list_new ="SS_1;SS_2;MART_tr_907;SS_3;MART_st_3;AS_cal_909;NaCl_cal_909;SS_4_1;MART_st_4;SS_4_2;SS_4_3;Mart_tr_910;MART_st_6_1;MART_st_6_2;MART_st_6_3;SS_6_1;MART_st_6_4;SW_st1_905_130L;ML_st1_905_100L;ML_st5_912_600L;SW_st5_912_215L;MART_tr_919N;MART_tr_919D;SS_6_2"//NAAMES 3 calibration & Seasweep
+
+strconstant ccn_samp_type_list_new ="SEA_SWEEP_1;SEA_SWEEP_2;SEA_SWEEP_3;SEA_SWEEP_4;SEA_SWEEP_5;SEA_SWEEP_6;SEA_SWEEP_7"
+strconstant ccn_samp_type_list ="SEA_SWEEP_1;SEA_SWEEP_2;SEA_SWEEP_3;SEA_SWEEP_4;SEA_SWEEP_5;SEA_SWEEP_6;SEA_SWEEP_7"
 
 constant mono_cn_lower_limit = 1.5
 
@@ -7786,8 +7789,21 @@ Function ccn_ttdma_load_valve()
 	
 End
 
-Function ccn_filter_on_types()
 
+
+Function ccn_filter_on_types([sample_type_list, export_fld])
+	string sample_type_list
+	string export_fld
+	
+	variable use_st_list=0
+	if (!ParamIsDefault(sample_type_list))
+		use_st_list=1
+	endif
+	
+	if (ParamIsDefault(export_fld))
+		export_fld="UNKNOWN"
+	endif
+	
 	string sdf = ccn_goto_ccn_folder()
 	
 	wave/T types = ccn_sample_type
@@ -7814,31 +7830,363 @@ Function ccn_filter_on_types()
 		string var = stringfromlist(vari,var_list)
 		wave src = $var
 
-		newdatafolder/o/s $"exports"
-		newdatafolder/o/s $"MART"
-		duplicate/o src $var
-		wave w = $var
-		ccn_goto_ccn_folder()
 		
-		for (i=0; i<numpnts(types); i+=1)
-			if (whichlistitem(types[i],mart_list)<0)
-				w[i] = NaN
-			endif
-		endfor
+		if (use_st_list)
 
-		newdatafolder/o/s $"exports"
-		newdatafolder/o/s $"SeaSweep"
-		duplicate/o src $var
-		wave w = $var
-		ccn_goto_ccn_folder()
+			newdatafolder/o/s $"exports"
+			newdatafolder/o/s $export_fld
+			duplicate/o src $var
+			wave w = $var
+			ccn_goto_ccn_folder()
+
+			for (i=0; i<numpnts(types); i+=1)
+				if (whichlistitem(types[i],sample_type_list)<0)
+					w[i] = NaN
+				endif
+			endfor
 		
-		for (i=0; i<numpnts(types); i+=1)
-			if (whichlistitem(types[i],ss_list)<0)
-				w[i] = NaN
+		else
+		
+			newdatafolder/o/s $"exports"
+			newdatafolder/o/s $"MART"
+			duplicate/o src $var
+			wave w = $var
+			ccn_goto_ccn_folder()
+
+			for (i=0; i<numpnts(types); i+=1)
+				if (whichlistitem(types[i],mart_list)<0)
+					w[i] = NaN
+				endif
+			endfor
+	
+			newdatafolder/o/s $"exports"
+			newdatafolder/o/s $"SeaSweep"
+			duplicate/o src $var
+			wave w = $var
+			ccn_goto_ccn_folder()
+			
+			for (i=0; i<numpnts(types); i+=1)
+				if (whichlistitem(types[i],ss_list)<0)
+					w[i] = NaN
+				endif
+			endfor
+			
 			endif
-		endfor
+		
 	endfor
 		
 			
 
 End
+
+// ** ccn_export_waves_using_filter **
+// Description: generate time series of cn, ccn and ratio for given sample types and flags
+//
+// Input: 
+//	data_type: "spectra" or "mono"
+//	sample_type_list: string list of sample types (if excluded, the flags will be searched over all types)
+//	flag_list: string list of flags (if excluded, no flags will be included)
+//
+// Output:
+//	Function will create new datafolders in the ccn folder. The structure will look like
+//		<sample_type>
+//			- ccn, cn, ratio, dt, ss, [dp]
+///
+//	The function will step through sample_types and then flags. In each folder, the time series will contain data if
+//	the sample type or sample type&flag (not all flags) are present. Bad data will not be included.
+//
+Function ccn_export_waves_using_filter(data_type,[sample_type_list, combine_types])
+	string data_type
+	string sample_type_list
+	string combine_types
+	
+	if (cmpstr(data_type,"spectra")!=0 && cmpstr(data_type,"mono")!=0)
+		print "Bad data_type. Allowed types: spectra or mono"
+		return 0
+	endif
+		
+	variable all_sample_types = 0
+	if (ParamIsDefault(sample_type_list) || cmpstr(sample_type_list,"")==0)
+		sample_type_list = "ALL_TYPES"
+		all_sample_types = 1
+	endif
+	
+	variable do_combine=1
+	if (!ParamIsDefault(combine_types))
+		if (cmpstr(combine_types,"false")==0)
+			do_combine=0
+		endif
+	endif
+
+////	variable require_flags=0
+//	if (ParamIsDefault(flag_list))
+//		flag_list = ""
+//	endif
+//
+//	// get wave nan db
+//	wave/T db = ccn_get_nan_db() 
+//	
+////	dfref dfr = GetDataFolderDFR()
+////	setdatafolder ccn_data_folder
+	string sdf = ccn_goto_ccn_folder()
+	
+
+	wave dt = ccn_datetime
+	wave all_ccn = CCN_Concentration_Cleaned
+	wave/T types = ccn_sample_type
+//	wave/T flags = ccn_flag_dev
+	wave all_cn = mono_cn_conc_shifted
+
+	wave dp = zi_smps_dp_ccn_mono
+	wave ss = SS_setting
+
+	// create folders
+	newdatafolder/o/s exports
+	
+	duplicate/O all_cn calc_ccn_cn_ratio
+	wave all_ratio = calc_ccn_cn_ratio
+	all_ratio = all_ccn/all_cn
+	
+	newdatafolder/o/s $data_type
+
+	variable typei
+	for (typei=0; typei<itemsinlist(sample_type_list); typei+=1)
+		string type = stringfromlist(typei,sample_type_list)
+		newdatafolder/o/s $type
+		
+		duplicate/o dt, $("ccn_datetime")
+		duplicate/o ss, $("ss")
+		if (cmpstr(data_type,"mono")==0)
+			duplicate/o dp $("dp")
+		endif
+		
+		if (!all_sample_types)
+			duplicate/o all_ccn, $("cn"), $("ccn"), $("ratio")
+			wave cn = $"cn"
+			wave ccn = $"ccn"
+			wave ratio = $"ratio"
+			cn = NaN
+			ccn = NaN
+			ratio = NaN
+			
+			variable row
+			for (row=0; row<numpnts(all_cn); row+=1)
+				if (cmpstr(types[row],type) == 0)
+					cn[row] = all_cn[row]
+					ccn[row] = all_ccn[row]
+					ratio[row] = all_ratio[row]
+				endif
+			endfor
+		endif
+				
+		variable flagi 
+//		for (flagi=0; flagi<itemsinlist(flag_list); flagi+=1)
+//			string flag = stringfromlist(flagi,flag_list)
+//			newdatafolder/o/s $flag
+//			
+//			duplicate/o all_ccn, $("cn"), $("ccn"), $("ratio")
+//			wave cn = $"cn"
+//			wave ccn = $"ccn"
+//			wave ratio = $"ratio"
+//			cn = NaN
+//			ccn = NaN
+//			ratio = NaN
+//
+//			for (row=0; row<numpnts(all_cn); row+=1)
+//				if (ccn_flag_is_set(flag, row))
+////				if (whichlistitem(flag,flags[row]) >= 0)
+//					if (all_sample_types || cmpstr(types[row],type) == 0) 
+//						cn[row] = all_cn[row]
+//						ccn[row] = all_ccn[row]
+//						ratio[row] = all_ratio[row]
+//					endif
+//				endif
+//			endfor
+//	
+//			setdatafolder ::
+//		endfor
+		
+		setdatafolder ::
+	endfor
+	killwaves/Z all_ratio
+			
+//			if (whichlistitem(flag,flags[row]) >= 0)
+//	
+//	
+//	// major change: 04 March 2018 - redo entire logic to geneate waves for flexibility
+//	
+//	variable row
+//	for (row=0; row<numpnts(ccn_clean); row+=1)
+//		
+//		string stype = types[row]
+//		if (whichlistitem(stype,sample_type_list) < 0 ) // not a valid type
+//			continue
+//		endif
+//		
+//		string sflag = flags[row]
+//		if (require_flags) // if user requires a specific set of flags then only process if all present
+//			variable has_all_flags = 0
+//			if (cmpstr(required_flag_list,"")==0 && itemsinlist(sflag)==0)
+//				has_all_flags = 1
+//			else
+//				variable flg_cnt = 0
+//				variable flgi
+//				for (flgi=0; flgi<itemsinlist(required_flag_list); flgi+=1)
+//					if (whichlistitem(stringfromlist(flgi,required_flag_list),sflag) > -1)
+//						flg_cnt +=1
+//					endif
+//				endfor
+//				if (flg_cnt == itemsinlist(required_flag_list))
+//					has_all_flags = 1
+//				endif
+//			endif
+//			if (!has_all_flags)
+//				continue
+//			endif
+//		endif				
+//		
+//		// if we've made it this far, process point
+//		if (ccn_valid_ss(ss[row])) // temp check for valid ss...need to fix original
+//			ccn_add_to_working_ss_wave("spectra",dt[row],ss=ss[row],sample_type=stype,flag_list=sflag)
+//		endif
+//	endfor
+//	
+//	// process working waves into ss_waves
+//	variable cols = 10 // number of columns in data wave
+//	
+//	setdatafolder :data:working
+//	wlist = acg_get_wave_list(filter="ss_*")
+//	setdatafolder :: // df = <>:data
+//	
+//	variable wi
+//	for (wi=0; wi<itemsinlist(wlist); wi+=1)
+//		string wn = stringfromlist(wi,wlist)
+//		
+//		wave work = $(":working:"+wn)
+//		if (numpnts(work) == 0) // skip if wave has no data
+//			continue
+//		endif
+//		
+//		if (!waveexists($(wn+"_dt")))
+//			make/o/n=0 $(wn+"_dt")
+//		endif
+//		wave data_dt= $(wn+"_dt")
+//
+//		if (!waveexists($wn))
+//			make/o/n=(0,cols) $wn
+//		endif
+//		wave data = $wn
+//		
+//		variable deltaT = 300 // valve timing
+//		ccn_process_working_wave(work,data_dt,data,dt,ccn_clean,mono_cn,ratio,deltaT)
+//		
+//		// set wavenote with metadata from working wave
+//		string meta = note(work)
+//		note/k data
+//		note data, meta
+//		
+//		ccn_set_wave_nans(db,data)
+//		
+//	endfor
+	
+
+// start comment of old code
+//	
+//	//variable curr_dp = 0
+//	//variable curr_dp_cnt = 0
+//	//variable dp_cnt_thrshld = 3 // have to wait 30 seconds to let smps data "catch up"
+//	variable curr_ss = 0
+//	
+//	// create intermediate waves of ss by type
+//		
+//	//variable dp_index, ss_index
+//	variable ss_index
+//	variable i,j,r
+//	make/o/d/n=0 tmp_datetime,tmp_ccn_conc, tmp_cn_conc, tmp_ccn_cn_ratio
+//	wave tmp_dt = tmp_datetime
+//	wave tmp_ccn = tmp_ccn_conc
+//	wave tmp_cn = tmp_cn_conc
+//	wave tmp_ratio = tmp_ccn_cn_ratio
+//
+//	// process each ss period for each sample type
+//	variable typ
+//	string samp_types=ccn_get_samp_type_list()	
+//	string curr_type = ""
+//	variable has_data = 0
+//	for (typ=1;	typ<itemsinlist(samp_types); typ+=1) // skip 0=BAD case
+//		string sample_type = stringfromlist(typ,samp_types)
+//		for (i=0;i<numpnts(ratio); i+=1)			
+////					if (ss[i] > 1.6)
+////						variable/D test = 1.7
+////						print "here " + num2str(ss[i])+num2str(ss[i])
+////						print ss[i], str2num(num2str(ss[i]))
+////						print (ss[i]==test)
+////						print (str2num(num2str(ss[i]))==1.7)
+////					endif
+//			
+////			if (ss[i] == 0.2 && cmpstr(sample_type,types[i])==0 && cmpstr(sample_type,"NaCl_U")==0)
+//			if (i==127577)
+//				print ss[i], types[i], sample_type, typ
+//			endif
+//
+//
+//			//if (ccn_valid_dp_ss_pair(dp[i], ss[i])) // if bad dp or ss skip altogether
+//			if (ccn_valid_ss(ss[i])) // if bad ss skip altogether
+//					
+//				if (curr_ss == 0)
+//					curr_ss = ss[i]
+//				endif
+//				if (cmpstr(curr_type,"")==0)
+//					curr_type = types[i]
+//				endif
+//	
+//				if (curr_ss != ss[i] || cmpstr(curr_type,types[i])!=0) // restart ss
+//					
+//					// add current data to proper wave in :data
+//					if (i>0)
+//						ccn_spectra_append_ss_wave(curr_ss,tmp_dt, tmp_ccn,tmp_cn,tmp_ratio,type=curr_type)
+//						redimension/n=0 tmp_dt, tmp_ccn, tmp_cn, tmp_ratio
+//						has_data=0
+//					endif
+//					
+//					curr_type = types[i]
+//					curr_ss = ss[i]
+//					if (cmpstr(sample_type,curr_type)==0)
+//						r =0
+//						redimension/n=(r+1) tmp_dt, tmp_ccn, tmp_cn, tmp_ratio
+//						tmp_dt[r] = dt[i]
+//						tmp_ccn[r] = ccn_clean[i]
+//						tmp_cn[r] = mono_cn[i]
+//						tmp_ratio[r] = ratio[i]
+//					endif
+//				else 
+//					curr_type = types[i]
+//					if (cmpstr(sample_type,curr_type)==0)
+//						r = numpnts(tmp_dt)
+//						redimension/n=(r+1) tmp_dt, tmp_ccn, tmp_cn, tmp_ratio
+//						tmp_dt[r] = dt[i]
+//						tmp_ccn[r] = ccn_clean[i]
+//						tmp_cn[r] = mono_cn[i]
+//						tmp_ratio[r] = ratio[i]
+//						has_data = 1
+//					endif
+//				endif				
+//			else
+//				if (has_data)
+//					ccn_spectra_append_ss_wave(curr_ss,tmp_dt[row], tmp_ccn,tmp_cn,tmp_ratio,type=curr_type)
+//					redimension/n=0 tmp_dt, tmp_ccn, tmp_cn, tmp_ratio
+//					has_data = 0
+//				endif
+//			endif
+//		endfor
+//	endfor
+//
+// end comment of old code
+	
+	// create dp vs. SS matrix
+
+//	killwaves/Z ratio
+	setdatafolder sdf
+	//SetDataFolder dfr
+End
+

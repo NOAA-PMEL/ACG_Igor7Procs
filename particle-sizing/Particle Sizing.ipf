@@ -4273,7 +4273,8 @@ Function sizing_merge_dmps_aps_2d(tb,isFilter,dmpsIsSamp, apsIsSamp,shape)
 	string sdf = getdatafolder(1)
 	
 	variable skipLastDMPS = 1
-	//variable numberToSkipDMPS = 2 // skip last 2 bins
+	// variable numberToSkipDMPS = 2 // skip last 2 bins
+	variable numberToSkipDMPS = 3 // skip last 2 bins
 	
 	variable filter_merge_candidates = 1
 	string bad_merge_name = "bad_dmps_merge"
@@ -4412,8 +4413,8 @@ Function sizing_merge_dmps_aps_2d(tb,isFilter,dmpsIsSamp, apsIsSamp,shape)
 
 //	for (i=0; i<dimsize(aps_dNdlogDp,0); i+=1)
 
-	dmps_merge_cols = (skipLastDMPS) ? dmps_cols-1 : dmps_cols
-//	dmps_merge_cols = (skipLastDMPS) ? dmps_cols-numberToSkipDMPS : dmps_cols
+//	dmps_merge_cols = (skipLastDMPS) ? dmps_cols-1 : dmps_cols
+	dmps_merge_cols = (skipLastDMPS) ? dmps_cols-numberToSkipDMPS : dmps_cols
 //	variable dmc = dmps_merge_cols
 //	variable last_is_bad = 0
 //		if (i==3324)
@@ -5249,6 +5250,7 @@ End
 
 // <<<-- end insert -->>>
 
+
 // 
 Function sizing_find_critical_dp(inst,tb,Conc_dt, Conc_crit,diam_type)
 	string inst
@@ -5415,6 +5417,137 @@ Function sizing_find_critical_dp(inst,tb,Conc_dt, Conc_crit,diam_type)
 	
 	
 	killwaves/Z dn, ds, dv, dm, dlogDp
+	setdatafolder sdf
+End	
+
+Function sizing_find_critical_dp_single(dp, dndlogdp, crit_conc)
+	wave dp
+	wave dndlogdp
+	variable crit_conc
+
+
+//	variable rows = dimsize(dndlogdp,0)
+	variable cols = numpnts(dndlogdp)
+//	make/o/n=(cols)/d dndlogdp_1d
+//	wave oneD = dndlogdp_1d
+//	variable cnt
+//	for (cnt=0; cnt<cols; cnt+=1)
+//		oneD[cnt] = dndlogdp[samp_index][cnt]
+//	endfor
+	
+//	make/o/n=(rows)/d $(inst+"_intN_"+fraction)
+	make/o/n=(cols*10)/d dndlogdp_1d_fit_dp
+	wave oneD_fit_dp = dndlogdp_1d_fit_dp	
+
+	variable start_dp = dp[0]
+	variable stop_dp = dp[numpnts(dp)-1]
+	oneD_fit_dp[0] = start_dp
+	oneD_fit_dp[1,] = oneD_fit_dp[p-1]*10^(log(stop_dp/start_dp)/(cols*10))
+
+	sizing_interp_nan_gap(oneD_fit_dp, dp, dndlogdp, "dndlogdp_1d_fit")
+	wave oneD_fit = dndlogdp_1d_fit
+	//edit oneD_fit_dp, oneD_fit
+	
+	duplicate/o oneD_fit_dp $("dlogDp_for_Dpcrit") 
+
+//	wave dsdlogdp = $(inst+"_dSdlogDp")
+//	wave ds = $(inst+"_dS")
+//	wave dvdlogdp = $(inst+"_dVdlogDp")
+//	wave dv = $(inst+"_dV")
+//	wave dmdlogdp = $(inst+"_dMdlogDp")
+//	wave dm = $(inst+"_dM")
+	
+	wave dlogDp = $("dlogDp_for_Dpcrit")
+	string DpBounds_name = "dp_bounds"
+	//getDpBounds(dp,DpBounds_name)
+	//wave bounds = $DpBounds_name
+	dlogDp = log(oneD_fit_dp[p+1]/oneD_fit_dp[p])
+	dlogDp[numpnts(dlogDp)-1] = dlogDp[numpnts(dlogDp)-2]
+	
+	duplicate/o oneD_fit $("dN_for_Dpcrit") 
+	wave dn = $("dN_for_Dpcrit")
+	dn = oneD_fit*dlogDp
+	
+	variable i, summ=0, crit_dp=NaN
+	for (i=numpnts(dn)-1; i>=0; i-=1)
+		if (summ+dn[i] > crit_conc)
+			crit_dp = ( (i>numpnts(dn)-1) || (i<0) ) ? NaN : oneD_fit_dp[i]
+			break
+		else
+			summ+=dn[i]
+		endif
+	endfor
+
+	// killwaves
+//	killwaves/Z oneD_fit_dp, dlogDp, oneD_fit, dn
+	return crit_dp
+	
+	
+//	ds = dsdlogdp*dlogDp
+//	make/o/n=(rows)/d $(inst+"_intS_"+fraction)
+//
+//	dv = dvdlogdp*dlogDp
+//	make/o/n=(rows)/d $(inst+"_intV_"+fraction)
+//
+//	dm = dmdlogdp*dlogDp
+//	make/o/n=(rows)/d $(inst+"_intM_"+fraction)
+//	
+//	wave intN = $(inst+"_intN_"+fraction)
+//	SetScale/P x dt[0],tb,"dat", intN
+//	wave intS = $(inst+"_intS_"+fraction)
+//	SetScale/P x dt[0],tb,"dat", intS
+//	wave intV = $(inst+"_intV_"+fraction)
+//	SetScale/P x dt[0],tb,"dat", intV
+//	wave intM = $(inst+"_intM_"+fraction)
+//	SetScale/P x dt[0],tb,"dat", intM
+//	variable i,j
+//	for (i=0; i<rows; i+=1)
+//		intN[i]=0
+//		intS[i]=0
+//		intV[i]=0
+//		intM[i]=0
+//		for (j=0; j<cols; j+=1)
+//			if ( cmpstr(fraction,"sub1")==0 ) // Dp < 1um
+//				if (dpa[j] <= 1.0)
+//					intN[i] += dN[i][j]
+//					intS[i] += dS[i][j]
+//					intV[i] += dV[i][j]
+//					intM[i] += dM[i][j]
+//				endif
+//			elseif ( cmpstr(fraction,"super1sub10")==0 ) // 1um < Dp < 10um
+//				if ( (dpa[j] > 1.0) && (dpa[j] <= 10.0) )
+//					intN[i] += dN[i][j]
+//					intS[i] += dS[i][j]
+//					intV[i] += dV[i][j]
+//					intM[i] += dM[i][j]
+//				endif
+//			elseif ( cmpstr(fraction,"super0.5sub1")==0 ) // 0.5um < Dp < 1um
+//				if ( (dpa[j] > 0.5) && (dpa[j] <= 1.0) )
+//					intN[i] += dN[i][j]
+//					intS[i] += dS[i][j]
+//					intV[i] += dV[i][j]
+//					intM[i] += dM[i][j]
+//				endif
+//			else
+//				variable ss = 0
+//				for (ss=0; ss<itemsinlist(ammsulf_sat_levels); ss+=1)
+//					if (cmpstr(fraction, stringfromlist(ss,ammsulf_sat_levels)) == 0) 
+//						variable low_dp = str2num(stringfromlist(ss,ammsulf_sat_Dp))
+//						if ( dpa[j] > low_dp  )
+//							intN[i] += dN[i][j]
+//							intS[i] += dS[i][j]
+//							intV[i] += dV[i][j]
+//							intM[i] += dM[i][j]
+//						endif
+//					endif
+//				endfor
+//				
+//			endif
+//		endfor
+//	endfor 
+	
+	
+//	killwaves/Z dn, ds, dv, dm, dlogDp, oneD_fit_dp
 	setdatafolder sdf
 End	
 
@@ -6272,16 +6405,16 @@ Function sizing_write_nsd()
 if (1)
 	// Section: dmps_dNdlogDp
 	// ------ make changes here ------ //
-	inst = "dmps"
+	inst = "dmps_aps"
 	tb = tb_value
 	dist_type = "nsd"
-	id_str = "dmps"
+	id_str = "dmps_aps"
 	version_str = "0"
 	isFilter = 0
 	isAmbient = 0
 	//dw_name = "dNdlogDp_2d_seasweep"
-	//dw_name = "dNdlogDp_2d"
-	dw_name = "dNdlogDp"
+	dw_name = "dNdlogDp_2d"
+	//dw_name = "dNdlogDp"
 	//dw_name = "dNdlogDp_SeaSweep"
 	
 	// add lat, lon to file
@@ -8538,7 +8671,9 @@ Function sizing_cor_dmps_w_smps(dmps_tb, smps_tb)
 			if (dp <= smps_dp[numpnts(smps_dp)-1])
 				dmps[row][col] = interp(dp, smps_dp, tmp_smps)
 			else
-				dmps[row][col] = dmps_orig[row][col]
+				// changed 07-Feb-2019: last 3 channels of DMPS are crap, keep them as NaN and ignore them in merge
+				// dmps[row][col] = dmps_orig[row][col]
+				dmps[row][col] = NaN
 			endif
 		endfor
 		

@@ -266,7 +266,7 @@ function load_smps_rows()
 	//LoadWave/J/D/N=dt/O/K=0/L={13,14,0,1,2}/P=loaddata_base_path
 	//LoadWave/J/D/N=dt/O/K=0/L={18,19,0,1,2}/P=loaddata_base_path
 	//LoadWave/J/D/N=dt/O/K=0/L={16,17,0,1,2}/P=loaddata_base_path  
-	LoadWave/J/D/N=dt/O/K=0/L={18,19,0,1,2}/P=loaddata_base_path  
+	LoadWave/J/D/N=dt/O/K=0/L={17,18,0,1,2}/P=loaddata_base_path  
 	NewPath/o/z path_to_smps, S_path
 	string smps_file = S_filename
 	wave dt0, dt1
@@ -280,7 +280,7 @@ function load_smps_rows()
 	//LoadWave/J/M/D/N=dp/O/K=0/L={13,13,1,4,0}/P=path_to_smps smps_file  // ICEALOT
 	//LoadWave/J/M/D/N=dp/O/K=0/L={18,18,1,8,0}/P=path_to_smps smps_file  // ICEALOT
 	//LoadWave/J/M/D/N=dp/O/K=0/L={16,16,1,8,0}/P=path_to_smps smps_file  // ICEALOT
-	LoadWave/J/M/D/N=dp/O/K=0/L={18,18,1,8,0}/P=path_to_smps smps_file  // ICEALOT
+	LoadWave/J/M/D/N=dp/O/K=0/L={17,17,1,8,0}/P=path_to_smps smps_file  // ICEALOT
 	wave dp0
 	make/o/n=1 smps_dp0
 	smps_dp0[0] = dp0[0][0]
@@ -298,7 +298,7 @@ function load_smps_rows()
 	//LoadWave/J/M/D/N=smps/O/K=0/L={13,14,0,4,numpnts(smps_dp0)}/P=path_to_smps smps_file  // ICEALOT
 	//LoadWave/J/M/D/N=smps/O/K=0/L={18,19,0,8,numpnts(smps_dp0)}/P=path_to_smps smps_file  // ICEALOT
 	//LoadWave/J/M/D/N=smps/O/K=0/L={16,17,0,8,numpnts(smps_dp0)}/P=path_to_smps smps_file 
-	LoadWave/J/M/D/N=smps/O/K=0/L={18,19,0,8,numpnts(smps_dp0)}/P=path_to_smps smps_file 
+	LoadWave/J/M/D/N=smps/O/K=0/L={17,18,0,8,numpnts(smps_dp0)}/P=path_to_smps smps_file 
 	killpath/Z path_to_smps
 	// create (or add to) dataset
 	string/G smps_dataset_name

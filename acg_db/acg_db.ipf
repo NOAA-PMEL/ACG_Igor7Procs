@@ -442,6 +442,33 @@ Function/S db_get_ids_string([dataset])
 	return ids_string
 End
 
+Function/S db_get_ds_meta(id, type)
+	variable id
+	string type
+
+	string sdf = db_goto_active_ds()
+	wave/T meta = :dataset_meta
+	setdatafolder sdf
+	
+	string key = ""
+	if (cmpstr(type,"name")==0)
+		key = "DS_ENTRY_NAME"
+	elseif (cmpstr(type,"note")==0)
+		key = "DS_ENTRY_NOTE"
+	else
+		return ""
+	endif
+	
+	variable i
+	for (i=0; i<dimsize(meta,0); i+=1)
+		if (str2num(meta[i][0])==id && cmpstr(meta[i][1], key)==0)
+			return meta[i][2]
+		endif
+	endfor
+	
+	return ""
+End
+
  Function/WAVE db_get_ds_entry(id) // maybe add option to change datasets later
 	variable id
  	
@@ -1333,14 +1360,19 @@ End
 //		print name
 //End
 
-Function db_add_data_src()
+Function db_add_data_src([force])
+	string force
+	
+	if (ParamIsDefault(force))
+		force="false"
+	endif
 
 
 	if (WinType("db_add_dsrc_win")==7)
 		DoWindow/F db_add_dsrc_win
 	else
 	
-		string sdf = db_goto_add_src_pkg() // make sure app is initialized
+		string sdf = db_goto_add_src_pkg(force=force) // make sure app is initialized
 		SVAR data_label = data_src_label
 		data_label = ""
 		NVAR dt_calc = dt_calc_cb
@@ -1349,6 +1381,8 @@ Function db_add_data_src()
 		dp_rb = 1
 		NVAR ht_rb = axis2_Ht_type_rb
 		ht_rb = 0
+		NVAR ss_rb = axis2_SS_type_rb
+		ss_rb = 0
 		setdatafolder sdf
 		
 		PauseUpdate; Silent 1		// building window...
@@ -1364,12 +1398,18 @@ Function db_add_data_src()
 		GroupBox datasrc_group,pos={14,21},size={464,336},title="Data Source",fSize=14
 		GroupBox dims_group,pos={39,172},size={427,166},title="Dimensions"
 		TitleBox dt_title,pos={59,197},size={75,13},title="DateTime wave",frame=0
-		TitleBox axis2_title,pos={62,274},size={89,13},title="Dp or Height wave",frame=0
-		TitleBox axis2_type_title,pos={382,270},size={24,13},title="Type",frame=0
-		CheckBox Dp_rb,pos={383,289},size={32,14},disable=2,proc=axis2_radioType_Proc,title="Dp"
+		TitleBox axis2_title,pos={62,274},size={89,13},title="Dp, Height or SS wave",frame=0
+		TitleBox axis2_type_title,pos={382,260},size={24,13},title="Type",frame=0
+		CheckBox Dp_rb,pos={383,279},size={32,14},disable=2,proc=axis2_radioType_Proc,title="Dp"
 		CheckBox Dp_rb,variable= root:Packages:acg:acgdb:add_src:axis2_Dp_type_rb,mode=1
-		CheckBox Height_rb,pos={382,308},size={49,14},disable=2,proc=axis2_radioType_Proc,title="Height"
+		CheckBox Height_rb,pos={382,298},size={49,14},disable=2,proc=axis2_radioType_Proc,title="Height"
 		CheckBox Height_rb,variable= root:Packages:acg:acgdb:add_src:axis2_Ht_type_rb,mode=1
+		CheckBox SS_rb,pos={382,317},size={49,14},disable=2,proc=axis2_radioType_Proc,title="SS"
+		CheckBox SS_rb,variable= root:Packages:acg:acgdb:add_src:axis2_SS_type_rb,mode=1
+
+		CheckBox axis2_ovr_cb,pos={200,274},size={62,14},title="override"
+		CheckBox axis2_ovr_cb,variable= root:Packages:acg:acgdb:add_src:axis2_override_cb
+
 		Button cancel_button,pos={25,380},size={50,20},proc=db_addsrc_ButtonProc,title="Reset"
 		Button cancel_button,fSize=14
 		Button add_button,pos={222,378},size={50,20},proc=db_addsrc_ButtonProc,title="Add"
@@ -1413,18 +1453,22 @@ Function db_add_src_SelectorNotify(event, wavepath, windowName, ctrlName)
 		SVAR data_label = data_src_label
 		data_label = stringfromlist(itemsinlist(wavepath,":")-1,wavepath,":") // get wave name of selected data source
 		
+		NVAR override_2d = axis2_override_cb
+		
 		wave data = $data_wave
-		variable is_2d = dimsize(data,1)
-
+		variable is_2d = (dimsize(data,1) || override_2d)
+		print "override = ", override_2d
 		if (is_2d)
 			// enable axis2 control
 			ModifyControl datasrc_2axis_button disable = 0
 			ModifyControl Dp_rb disable = 0
 			ModifyControl Height_rb disable = 0
+			ModifyControl SS_rb disable = 0
 		else
 			ModifyControl datasrc_2axis_button disable = 2			
 			ModifyControl Dp_rb disable = 2
 			ModifyControl Height_rb disable = 2
+			ModifyControl SS_rb disable = 2
 			
 			SVAR axis2_wave =  axis2_src_wave
 			axis2_wave = ""
@@ -1465,14 +1509,24 @@ Function axis2_radioType_Proc(cba) : CheckBoxControl
 	string sdf = db_goto_add_src_pkg() // make sure app is initialized
 	NVAR dp_rb = axis2_Dp_type_rb
 	NVAR ht_rb = axis2_Ht_type_rb
+	NVAR ss_rb = axis2_SS_type_rb
 	
+//	print "rt ctrl name: ", cba
 	switch( cba.eventCode )
 		case 2: // mouse up
 			Variable checked = cba.checked
 			if (cmpstr(cba.ctrlName,"Dp_rb")==0)
+				dp_rb = 1
 				ht_rb = 0
+				ss_rb = 0
 			elseif (cmpstr(cba.ctrlName,"Height_rb")==0)
 				dp_rb = 0
+				ht_rb = 1
+				ss_rb = 0
+			elseif (cmpstr(cba.ctrlName,"SS_rb")==0)
+				dp_rb = 0
+				ht_rb = 0
+				ss_rb = 1
 			endif			
 				
 			// need to use nvar in config folder like tbm
@@ -1520,6 +1574,7 @@ Function db_addsrc_ButtonProc(ba) : ButtonControl
 				SVAR axis2_name = axis2_src_wave			
 				NVAR is_dp = axis2_Dp_type_rb
 				NVAR is_ht = axis2_Ht_type_rb
+				NVAR is_ss = axis2_SS_type_rb
 				
 				
 				
@@ -1547,6 +1602,8 @@ Function db_addsrc_ButtonProc(ba) : ButtonControl
 						axis = "DP_AXIS"
 					elseif (is_ht)
 						axis = "HEIGHT_AXIS"
+					elseif (is_ss)
+						axis = "SS_AXIS"
 					else
 						axis = ""
 					endif
@@ -1595,11 +1652,16 @@ Function db_addsrc_ButtonProc(ba) : ButtonControl
 	return 0
 End
 
-Function/S db_goto_add_src_pkg()
+Function/S db_goto_add_src_pkg([force])
+	string force
+	
+	if (ParamIsDefault(force))
+		force="false"
+	endif
 	
 	string sdf = db_goto_acgdb_pkg()
 	
-	db_init_add_src()
+	db_init_add_src(force=force)
 	
 	setdatafolder :add_src
 	
@@ -1607,17 +1669,27 @@ Function/S db_goto_add_src_pkg()
 
 End
 
-Function db_init_add_src()
+Function db_init_add_src([force])
+	string force
+	
+	variable do_force = 0
+	if (!ParamIsDefault(force))
+		if (cmpstr(force,"true")==0)
+			do_force=1
+		endif
+	endif
 
 //	string sdf = db_goto_acgdb_pkg()
 	
-	if (!datafolderexists("add_src"))
+	if (!datafolderexists("add_src") || do_force)
 		newdatafolder/o/s :add_src
 	
 		// checkboxes
 		variable/G axis2_Dp_type_rb = 1
 		variable/G axis2_Ht_type_rb = 0
+		variable/G axis2_SS_type_rb = 0
 		variable/G dt_calc_cb = 1
+		variable/G axis2_override_cb=0
 
 		// value fields
 		string/G data_src_label = "<no label>"
@@ -1892,6 +1964,9 @@ Function db_app_average_data([datasource,dataset])
 		if (cmpstr(axis2_name,"")==0)
 			axis2_name = db_get_srcdim__(datasource_dims, "HEIGHT_AXIS")
 		endif
+		if (cmpstr(axis2_name,"")==0)
+			axis2_name = db_get_srcdim__(datasource_dims, "SS_AXIS")
+		endif
 		print "axis2_name", axis2_name
 		
 		//acg_avg_using_time_index_2d(avg_per_start, avg_per_stop, dt, dat, output_name)
@@ -2107,12 +2182,14 @@ Function db_app_fit_sizedist_data([datasource,dataset])
 	newdatafolder/o/s $APP_SIGNATURE
 	
 	// create app data waves (zero length) if doesn't exist
-	if (!waveexists($"fit_params"))
+	if (!waveexists($"fit_params") )
 		 
 		make/o/n=(0,11) $"fit_params" // add extra column for ids
 //		make/o/n=(0,4) $"number_conc" // add extra column for ids
 //		make/o/n=(0,2) $"ssa_nfrac" // add extra column for ids
 		
+	elseif (dimsize($"fit_params",0) != numpnts(ids))
+		print "fit_param size != ids"
 	endif
 	//make/o/n=(dimsize(data_avg,1)) $"aitken_fit", $"accum_fit", $"ssa_fit",  $"total_fit" 
 	
@@ -2438,6 +2515,9 @@ Function db_update_app_fit_dist()
 	
 	NVAR index = index_field 
 	NVAR iupper_limit = index_upper_limit
+	if (index>iupper_limit)
+		index = 0
+	endif
 	//variable index = id-1 // TODO: make this truly based on id
 	
 	// set gui params with struct
@@ -3106,16 +3186,15 @@ Function db_update_fit_param()
 	killwaves/Z ids
 End
 
-// App: kappa
-
-Function db_app_find_kappa([datasource,dataset])
+// App: average ccn (turns 1d into 2d data
+Function db_app_average_ccn_data([datasource,dataset])
 	string datasource
 	string dataset
 	
-	string APP_SIGNATURE = "kappa"
-	string app_long_name = "Find kapp from size distribution"
-	// change!
-	db_register_app(APP_SIGNATURE,app_long_name,"db_app_find_kappa([datasource,dataset])")
+	string APP_SIGNATURE = "average_ccn"
+	string app_long_name = "Average CCN (and stats)"
+	db_register_app(APP_SIGNATURE,app_long_name,"db_app_average_ccn_data([datasource,dataset])")
+	//db_register_app_dependence(APP_SIGNATURE,"")
 	
 	string sdf = getdatafolder(1)
 	
@@ -3160,7 +3239,270 @@ Function db_app_find_kappa([datasource,dataset])
 	print "		Dataset: ", dataset
 	print "			Data: ", datasource_path
 	
+	
 	wave data = $datasource_path
+		
+	string dt_name = db_get_srcdim__(datasource_dims, "DATETIME_AXIS")
+	variable clean_up_dt = 0
+	if(cmpstr(dt_name,"") == 0)
+		// use wavescaling
+		wave dt = acg_extract_dt(data)
+		dt_name = nameofwave(dt)
+		print "dt_name = ", dt_name
+		clean_up_dt = 1			
+	endif
+	wave dt = $dt_name
+	
+	// get ss wave from 2d dim setting for SS
+	string axis2_name = db_get_srcdim__(datasource_dims, "SS_AXIS")
+	wave ss = $axis2_name
+	
+	// get ss_setting from folder containing datasource
+	string ccn_fldr = getwavesdatafolder(data,1)
+	wave ss_setting = $(ccn_fldr+"SS_setting")
+	
+	
+//	variable is_2d = 0
+//	if (dimsize(data,1)) // 2d wave
+//		string axis2_name = db_get_srcdim__(datasource_dims, "DP_AXIS")
+//		if (cmpstr(axis2_name,"")==0)
+//			axis2_name = db_get_srcdim__(datasource_dims, "HEIGHT_AXIS")
+//		endif
+//		if (cmpstr(axis2_name,"")==0)
+//			axis2_name = db_get_srcdim__(datasource_dims, "SS_AXIS")
+//		endif
+//		print "axis2_name", axis2_name
+//		
+//		//acg_avg_using_time_index_2d(avg_per_start, avg_per_stop, dt, dat, output_name)
+//		is_2d = 1
+//	endif
+	
+	// get list of dataset ids
+	wave ids = db_get_ds_ids()
+	
+
+	// init app structure
+	db_goto_datasource(datasource)
+
+	newdatafolder/o $APP_SIGNATURE
+	
+	// add meta - maybe add global STRUCT to define meta values
+	string RECREATE = "db_app_average_data(datasource=\""+datasource+"\",dataset=\""+dataset+"\")"
+	db_app_update_meta__(datasource, APP_SIGNATURE,"RECREATE",APP_SIGNATURE,RECREATE)
+	
+	//print db_app_get_meta__("RECREATE",APP_SIGNATURE)
+
+	// create app folder
+	newdatafolder/o/s $APP_SIGNATURE
+	
+	// create app data waves 
+	make/o/n=(numpnts(ids),numpnts(ss)) $"data_avg"
+	wave dat_avg = $"data_avg"
+
+	make/o/n=(numpnts(ids),numpnts(ss)) $"data_sd"
+	wave dat_sd = $"data_sd"
+	
+	make/o/n=(numpnts(ids),numpnts(ss)) $"data_min"
+	wave dat_min = $"data_min"
+
+	make/o/n=(numpnts(ids),numpnts(ss)) $"data_max"
+	wave dat_max = $"data_max"
+	
+	// create wave for convenience
+	duplicate/o ss, $"ss_dimension"
+
+	db_app_update_wavelist__(datasource,APP_SIGNATURE,dat_avg,is_default=1)
+	db_app_update_wavelist__(datasource,APP_SIGNATURE,dat_sd)
+	db_app_update_wavelist__(datasource,APP_SIGNATURE,dat_min)
+	db_app_update_wavelist__(datasource,APP_SIGNATURE,dat_max)
+	
+	
+	// create working dt waves
+	make/o/n=1 start_dt_wave
+	wave start_dt = start_dt_wave	
+	make/o/n=1 stop_dt_wave
+	wave stop_dt = stop_dt_wave	
+
+
+	variable tol = 0.0001
+	variable i
+	for (i=0; i<numpnts(ids); i+=1)
+	
+		start_dt[0] = db_get_ds_entry_start_dt(ids[i])
+		stop_dt[0] = db_get_ds_entry_stop_dt(ids[i])
+		
+		variable start_index =  binarysearch(dt, start_dt[0])
+		variable stop_index = binarysearch(dt, stop_dt[0])
+		
+		if (start_index == -1 && stop_index==-1)
+			continue
+		elseif (start_index==-1 && stop_index>=0)
+			start_index = 0
+		elseif(start_index>=0 && stop_index==-2)
+			stop_index = numpnts(dt)-1
+		endif
+
+		// working wave for averages
+		make/o/n=( (stop_index-start_index+1),numpnts(ss)) working_ccn
+		wave working = working_ccn
+		working = NaN
+		
+		variable row
+		for (row=start_index; row<=stop_index; row+=1)
+			variable ccn = data[row]
+			variable ss_val = ss_setting[row]
+			
+			variable ssi
+			for (ssi=0; ssi<numpnts(ss); ssi+=1)
+//				print ssi, ss[ssi], ss_val, tol, ss[ssi]-ss_val
+				if ( abs(ss[ssi] - ss_val) < tol)
+					working[row-start_index][ssi] = ccn
+					break
+//					continue
+				endif
+			endfor
+		endfor
+		
+		for (ssi=0; ssi<numpnts(ss); ssi+=1)
+			
+			wavestats/Q/RMD=[0,numpnts(working)-1][ssi,ssi] working
+			dat_avg[i][ssi] = V_avg
+			dat_sd[i][ssi] = V_sdev
+			dat_min[i][ssi] = V_min
+			dat_max[i][ssi] = V_max
+//			print ss[ssi], i, ssi, dat_avg[i][ssi]
+		endfor
+		
+		// average data
+//		string output = "output"
+//		if (is_2d)
+//			acg_avg_using_time_index_2d(start_dt, stop_dt, dt, data, output)
+//			wave out = $output
+//			dat_avg[i][] = out[0][q]
+//			
+//			acg_sd_using_time_index_2d(start_dt, stop_dt, dt, data, output)
+//			wave out = $output
+//			dat_sd[i][] = out[0][q]
+//
+//			acg_min_using_time_index_2d(start_dt, stop_dt, dt, data, output)
+//			wave out = $output
+//			dat_min[i][] = out[0][q]
+//
+//			acg_max_using_time_index_2d(start_dt, stop_dt, dt, data, output)
+//			wave out = $output
+//			dat_max[i][] = out[0][q]
+//			
+//		else
+//			acg_avg_using_time_index(start_dt, stop_dt, dt, data, output)
+//			wave out = $output
+//			dat_avg[i] = out[0]
+//				
+//			acg_sd_using_time_index(start_dt, stop_dt, dt, data, output)
+//			wave out = $output
+//			dat_sd[i] = out[0]
+//
+//			acg_min_using_time_index(start_dt, stop_dt, dt, data, output)
+//			wave out = $output
+//			dat_min[i] = out[0]
+//
+//			acg_max_using_time_index(start_dt, stop_dt, dt, data, output)
+//			wave out = $output
+//			dat_max[i] = out[0]
+//		endif
+		
+	endfor
+
+	// clean up tmp waves
+	if (clean_up_dt)
+		killwaves/Z dt
+	endif
+	killwaves/Z ids,start_dt,stop_dt,out, working
+	
+	setdatafolder sdf
+End
+
+
+// App: kappa - use size dist as datasource
+
+Function db_app_find_kappa([ccn_datasource, sizing_datasource, dataset])
+	string ccn_datasource
+	string sizing_datasource
+	string dataset
+	
+	string APP_SIGNATURE = "kappa"
+	string app_long_name = "Find kappa from size distribution"
+	// change!
+	db_register_app(APP_SIGNATURE,app_long_name,"db_app_find_kappa([datasource,dataset])")
+	
+	string sdf = getdatafolder(1)
+	
+	if (ParamIsDefault(dataset))
+		dataset = db_get_active_ds()
+		string dsets = db_ds_list()
+		variable list_item = whichlistitem(dataset,dsets)
+		if (list_item < 0)
+			list_item = 1
+		else
+			list_item  +=1
+		endif
+		
+		prompt list_item, "Dataset: ", popup, dsets
+		DoPrompt "Select dataset", list_item
+		if (V_flag)
+			print "user canceled!"
+			return 0
+		endif
+		dataset = stringfromlist(list_item-1,dsets)
+	endif
+	db_set_active_ds(name=dataset)
+
+	if (ParamIsDefault(ccn_datasource))
+		string labels = db_get_datasource_par_list("LABEL")
+		//datasource = db_get_active_ds()
+		//variable label_item = whichlistitem(datasource,labels)+1
+		variable label_item = 1
+		prompt label_item, "CCN Data source: ", popup, labels
+		DoPrompt "Select  CCN data source", label_item
+		if (V_flag)
+			print "user canceled!"
+			return 0
+		endif
+		ccn_datasource = stringfromlist(label_item-1,labels)
+	endif
+	string ccn_datasource_path = db_get_path_by_label(ccn_datasource)
+	string ccn_datasource_dims = db_get_dims_by_label(ccn_datasource)
+	
+	print "App: ", APP_SIGNATURE
+	print "	DB: ", db_get_active_db()
+	print "		Dataset: ", dataset
+	print "			Data: ", ccn_datasource_path
+	
+	wave ccn_data = $ccn_datasource_path
+
+	string cdf = db_goto_datasource(ccn_datasource)
+	wave ccn_avg = :average_ccn:data_avg
+	wave ccn_sd = :average_ccn:data_sd
+	setdatafolder cdf
+
+
+	if (ParamIsDefault(sizing_datasource))
+		labels = db_get_datasource_par_list("LABEL")
+		//datasource = db_get_active_ds()
+		//variable label_item = whichlistitem(datasource,labels)+1
+		label_item = 1
+		prompt label_item, "Sizing Data source: ", popup, labels
+		DoPrompt "Select  Sizing data source", label_item
+		if (V_flag)
+			print "user canceled!"
+			return 0
+		endif
+		sizing_datasource = stringfromlist(label_item-1,labels)
+		print "sizing_datasource(label) = ", sizing_datasource
+	endif
+	string sizing_datasource_path = db_get_path_by_label(sizing_datasource)
+	string sizing_datasource_dims = db_get_dims_by_label(sizing_datasource)
+	
+	wave sizing_data = $sizing_datasource_path
 
 //	string dt_name = db_get_srcdim__(datasource_dims, "DATETIME_AXIS")
 //	variable clean_up_dt = 0
@@ -3173,9 +3515,10 @@ Function db_app_find_kappa([datasource,dataset])
 //	endif
 //	wave dt = $dt_name
 	
+	// sizing
 	variable is_2d = 0
-	if (dimsize(data,1)) // 2d wave
-		string dp_name = db_get_srcdim__(datasource_dims, "DP_AXIS")
+	if (dimsize(sizing_data,1)) // 2d wave
+		string dp_name = db_get_srcdim__(sizing_datasource_dims, "DP_AXIS")
 		if (cmpstr(dp_name,"")==0)
 			print "Dp axis not defined"
 			return 0
@@ -3184,7 +3527,31 @@ Function db_app_find_kappa([datasource,dataset])
 		
 		//acg_avg_using_time_index_2d(avg_per_start, avg_per_stop, dt, dat, output_name)
 		is_2d = 1
+	else
+		return 1 // needs to be a 2d wave
 	endif
+	wave dp = $dp_name
+	// get averaged sizing data
+	string tdf = db_goto_datasource(sizing_datasource)
+	wave sizing_avg = :average:data_avg
+	setdatafolder tdf
+	
+	// ccn
+	is_2d = 0
+	//if (dimsize(ccn_data,1)) // 2d wave
+	string ss_name = db_get_srcdim__(ccn_datasource_dims, "SS_AXIS")
+	if (cmpstr(ss_name,"")==0)
+		print "SS axis not defined"
+		return 0
+	endif
+	print "ss_name", ss_name
+		
+//		//acg_avg_using_time_index_2d(avg_per_start, avg_per_stop, dt, dat, output_name)
+//		is_2d = 1
+//	else
+//		return 1 // needs to be a 2d wave
+//	endif
+	wave ss = $ss_name
 	
 	// needs average data to find kappa
 	//wave data_avg = $(db_get_app_data(datasource,"average"))
@@ -3196,62 +3563,557 @@ Function db_app_find_kappa([datasource,dataset])
 	
 
 	// init app structure
-	db_goto_datasource(datasource)
+	db_goto_datasource(ccn_datasource)
 
 	// add meta - maybe add global STRUCT to define meta values
-	string RECREATE = "db_app_find_kappa(datasource=\""+datasource+"\",dataset=\""+dataset+"\")"
+//	string RECREATE = "db_app_find_kappa(ccn_datasource=\""+ccn_datasource+"\",sizing_datasource=\""+sizing_datasource+"\",dataset=\""+dataset+"\")"
 	//db_app_update_meta__("RECREATE",APP_SIGNATURE,RECREATE)
 	//print db_app_get_meta__("RECREATE",APP_SIGNATURE)
 
 	// create app folder
 	newdatafolder/o/s $APP_SIGNATURE
+	newdatafolder/o/s $sizing_datasource
 
 // START HERE FOR NEW APP
 
+	// create app data waves 
+	make/o/n=(numpnts(ids),numpnts(ss)) $"kappa_avg"
+	wave kappa_avg = $"kappa_avg"
+
+	make/o/n=(numpnts(ids),numpnts(ss)) $"kappa_sd"
+	wave kappa_sd = $"kappa_sd"
 	
-	// create app data waves (zero length) if doesn't exist
-	if (!waveexists($"fit_params"))
-		 
-		make/o/n=(0,11) $"fit_params" // add extra column for ids
-//		make/o/n=(0,4) $"number_conc" // add extra column for ids
-//		make/o/n=(0,2) $"ssa_nfrac" // add extra column for ids
+//	make/o/n=(numpnts(ids),numpnts(ss)) $"kappa_min"
+//	wave kappa_min = $"kappa_min"
+//
+//	make/o/n=(numpnts(ids),numpnts(ss)) $"kappa_max"
+//	wave kappa_max = $"kappa_max"
+
+	make/o/n=(numpnts(ids),numpnts(ss)) $"kappa_0_5_avg"
+	wave kappa_0_5_avg = $"kappa_0_5_avg"
+
+	make/o/n=(numpnts(ids),numpnts(ss)) $"kappa_0_5_sd"
+	wave kappa_0_5_sd = $"kappa_0_5_sd"
+	
+//	make/o/n=(numpnts(ids),numpnts(ss)) $"kappa_0_5_min"
+//	wave kappa_0_5_min = $"kappa_0_5_min"
+//
+//	make/o/n=(numpnts(ids),numpnts(ss)) $"kappa_0_5_max"
+//	wave kappa_0_5_max = $"kappa_0_5_max"
+
+	make/o/n=(numpnts(ids), numpnts(ss)) $"dp_crit_avg"
+	wave dp_crit_avg = $"dp_crit_avg"
+
+	make/o/n=(numpnts(ids), numpnts(ss)) $"dp_crit_sd"
+	wave dp_crit_sd = $"dp_crit_sd"
+
+//	make/o/n=(numpnts(ids), numpnts(ss)) $"dp_crit_min"
+//	wave dp_crit_min = $"dp_crit_min"
+//
+//	make/o/n=(numpnts(ids), numpnts(ss)) $"dp_crit_max"
+//	wave dp_crit_max = $"dp_crit_max"
+
+	make/o/n=(numpnts(ids), numpnts(ss)) $"dp_crit_0_5_avg"
+	wave dp_crit_0_5_avg = $"dp_crit_0_5_avg"
+
+	make/o/n=(numpnts(ids), numpnts(ss)) $"dp_crit_0_5_sd"
+	wave dp_crit_0_5_sd = $"dp_crit_0_5_sd"
+
+//	make/o/n=(numpnts(ids), numpnts(ss)) $"dp_crit_0_5_min"
+//	wave dp_crit_0_5_min = $"dp_crit_0_5_min"
+//
+//	make/o/n=(numpnts(ids), numpnts(ss)) $"dp_crit_0_5_max"
+//	wave dp_crit_0_5_max = $"dp_crit_0_5_max"
+
+	db_app_update_wavelist__(ccn_datasource,APP_SIGNATURE,kappa_0_5_avg,is_default=1)
+	db_app_update_wavelist__(ccn_datasource,APP_SIGNATURE,kappa_0_5_sd)
+//	db_app_update_wavelist__(datasource,APP_SIGNATURE,kappa_0_5_min)
+//	db_app_update_wavelist__(datasource,APP_SIGNATURE,kappa_0_5_max)
+	db_app_update_wavelist__(ccn_datasource,APP_SIGNATURE,kappa_avg)
+	db_app_update_wavelist__(ccn_datasource,APP_SIGNATURE,kappa_sd)
+//	db_app_update_wavelist__(datasource,APP_SIGNATURE,kappa_min)
+//	db_app_update_wavelist__(datasource,APP_SIGNATURE,kappa_max)
+	db_app_update_wavelist__(ccn_datasource,APP_SIGNATURE,dp_crit_avg)
+	db_app_update_wavelist__(ccn_datasource,APP_SIGNATURE,dp_crit_sd)
+//	db_app_update_wavelist__(datasource,APP_SIGNATURE,dp_crit_min)
+//	db_app_update_wavelist__(datasource,APP_SIGNATURE,dp_crit_max)
+	db_app_update_wavelist__(ccn_datasource,APP_SIGNATURE,dp_crit_0_5_avg)
+	db_app_update_wavelist__(ccn_datasource,APP_SIGNATURE,dp_crit_0_5_sd)
+//	db_app_update_wavelist__(datasource,APP_SIGNATURE,dp_crit_0_5_min)
+//	db_app_update_wavelist__(datasource,APP_SIGNATURE,dp_crit_0_5_max)
+	
+	
+//	// hard_code for now
+//	wave ccn_avg = :::average_ccn:data_avg
+//	wave ccn_sd = :::average_ccn:data_sd
+//	//wave dp = 
+	
+//	// create data for gui
+//	STRUCT AppData_find_kappa fk_data
+//	fk_data.app_sig = APP_SIGNATURE
+//	fk_data.datasource = datasource
+//	fk_data.dataset = dataset
+//	fk_data.avgdata_name = getwavesdatafolder(data_avg,2)
+//	fk_data.dp_name = dp_name
+//	fk_data.dp_crit_name = getwavesdatafolder(dp_crit,2)
+//	fk_data.kappa_name = getwavesdatafolder(kappa,2)
+//	fk_data.ss_name = getwavesdatafolder(ss,2)
+	
+	//db_update_appdata_fit_dist(fd_data)
+
+	// *** Calculate critial dp and kappas ***
+	variable idi, ssi
+	for (idi=0; idi<numpnts(ids); idi+=1)
+	
+		make/o/n=(dimsize(sizing_avg,1)) tmp_distribution
+		wave tmp_dist = tmp_distribution
+		tmp_dist = sizing_avg[idi][p]
 		
-	endif
-	//make/o/n=(dimsize(data_avg,1)) $"aitken_fit", $"accum_fit", $"ssa_fit",  $"total_fit" 
-	
-	//wave aitken = $"aitken_fit"
-	//wave accum = $"accum_fit"
-	//wave ssa = $"ssa_fit"
-	//wave total = $"total_fit"
-	
-	wave fit_par = $"fit_params"
-	//wave num_conc = $"number_conc"
-	//wave nfrac = $"ssa_nfrac"
+		for (ssi=0; ssi<numpnts(ss); ssi+=1)
+			variable crit_conc = ccn_avg[idi][ssi]
+			variable crit_conc_sd = ccn_sd[idi][ssi]
+//			print ss[ssi], crit_conc
+			
+			// find dp_crit/kappa for crit and crit_0_5 for avg, min, max
 
-	//string path = stringbykey("PATH",waveinfo(fit_par,0))
-	//db_app_update_meta__("DEFAULT",APP_SIGNATURE,path)
-	
-	// hard_code for now
-	wave data_avg = ::average:data_avg
-	//wave dp = 
-	
-	// create data for gui
-	STRUCT AppData_fit_dist fd_data
-	fd_data.app_sig = APP_SIGNATURE
-	fd_data.datasource = datasource
-	fd_data.dataset = dataset
-	fd_data.avgdata_name = getwavesdatafolder(data_avg,2)
-	fd_data.dp_name = dp_name
-	fd_data.fit_par_name = getwavesdatafolder(fit_par,2)
-	
-	db_update_appdata_fit_dist(fd_data)
+			// conc/2
+//			dp*=1000
+			variable dp_crit = sizing_find_critical_dp_single(dp, tmp_dist, (crit_conc/2))
+//			dp_crit /= 1000
+//			dp/=1000
+			variable dp_crit_plus = sizing_find_critical_dp_single(dp, tmp_dist, ((crit_conc+crit_conc_sd)/2))
+			variable dp_crit_minus = sizing_find_critical_dp_single(dp, tmp_dist, ((crit_conc-crit_conc_sd)/2))
+			dp_crit_0_5_avg[idi][ssi] = dp_crit
+//			print "dp_crit[][]", idi, ssi, ss[ssi], dp_crit_0_5_avg[idi][ssi], crit_conc
+			if (numtype(dp_crit)==0)
+				variable k = ccn_find_kappa(ss[ssi], (dp_crit*1000), 0.073)
+				kappa_0_5_avg[idi][ssi] = k
+			else
+				kappa_0_5_avg[idi][ssi] = NaN
+				dp_crit_plus = NaN
+				dp_crit_minus = NaN
+			endif
+			
+			if (numtype(dp_crit_plus)==0 && numtype(dp_crit_minus)==0)
+				dp_crit_0_5_sd[idi][ssi] = abs(dp_crit_plus-dp_crit_minus)/2
+				variable k_plus= ccn_find_kappa(ss[ssi], (dp_crit_plus*1000), 0.073)
+				variable k_minus= ccn_find_kappa(ss[ssi], (dp_crit_minus*1000), 0.073)
+				kappa_0_5_sd[idi][ssi] = abs(k_plus-k_minus)/2
+			else
+				dp_crit_0_5_sd[idi][ssi] = NaN
+				kappa_0_5_sd[idi][ssi]  = NaN
+			endif
 
+			// conc
+			dp_crit = sizing_find_critical_dp_single(dp, tmp_dist, (crit_conc))
+			dp_crit_plus = sizing_find_critical_dp_single(dp, tmp_dist, ((crit_conc+crit_conc_sd)))
+			dp_crit_minus = sizing_find_critical_dp_single(dp, tmp_dist, ((crit_conc-crit_conc_sd)))
+			dp_crit_avg[idi][ssi] = dp_crit
 
+			if (numtype(dp_crit)==0)
+				k = ccn_find_kappa(ss[ssi], (dp_crit*1000), 0.073)
+				kappa_avg[idi][ssi] = k
+			else
+				kappa_avg[idi][ssi] = NaN
+				dp_crit_plus = NaN
+				dp_crit_minus = NaN
+			endif
+			
+			if (numtype(dp_crit_plus)==0 && numtype(dp_crit_minus)==0)
+				dp_crit_sd[idi][ssi] = abs(dp_crit_plus-dp_crit_minus)/2
+				k_plus= ccn_find_kappa(ss[ssi], (dp_crit_plus*1000), 0.073)
+				k_minus= ccn_find_kappa(ss[ssi], (dp_crit_minus*1000), 0.073)
+				kappa_sd[idi][ssi] = abs(k_plus-k_minus)/2
+			else
+				dp_crit_sd[idi][ssi] = NaN
+				kappa_sd[idi][ssi]  = NaN
+			endif
+			
+			
+		endfor
+		
+//		sizing_find_critical_dp(inst,tb,Conc_dt, Conc_crit,diam_type)
+	endfor
+	
 	// show window
-	 db_app_fit_size_dist_gui()
+	 //db_app_fit_size_dist_gui()
 	 
-	 killwaves/Z ids
+	 killwaves/Z ids, tmp_distribution
 
+End
+
+Function db_plot_kappa([ccn_datasource, sizing_datasource, dataset, add_to_current, crit_ratio, error_bars, add_labels])
+	string ccn_datasource
+	string sizing_datasource
+	string dataset
+	string add_to_current // Default: false
+	string crit_ratio // "1" or "0.5" Default: "0.5"
+	string error_bars // Default: false
+	string add_labels
+	
+	
+	string APP_SIGNATURE = "kappa"
+	string sdf = getdatafolder(1)
+
+	variable new_plot = 1
+	variable init_curve_cnt = 0
+	if (!ParamIsDefault(add_to_current) && cmpstr(add_to_current,"true")==0)
+		new_plot = 0
+		init_curve_cnt = itemsinlist(tracenamelist("",";",1+4))/2
+	endif
+
+	if (ParamIsDefault(add_labels))
+		add_labels = "false"
+	endif
+	
+	string ratio_str = "_0_5"
+	if (!ParamIsDefault(crit_ratio) && cmpstr(crit_ratio,"1")==0)
+		ratio_str=""
+	endif
+	
+	variable do_error_bars = 0
+	if (!ParamIsDefault(error_bars) && cmpstr(error_bars,"true")==0)
+		do_error_bars = 1
+	endif
+	
+	if (ParamIsDefault(dataset))
+		dataset = db_get_active_ds()
+		string dsets = db_ds_list()
+		variable list_item = whichlistitem(dataset,dsets)
+		if (list_item < 0)
+			list_item = 1
+		else
+			list_item  +=1
+		endif
+		
+		prompt list_item, "Dataset: ", popup, dsets
+		DoPrompt "Select dataset", list_item
+		if (V_flag)
+			print "user canceled!"
+			return 0
+		endif
+		dataset = stringfromlist(list_item-1,dsets)
+	endif
+	db_set_active_ds(name=dataset)
+
+	if (ParamIsDefault(ccn_datasource))
+		string labels = db_get_datasource_par_list("LABEL")
+		//datasource = db_get_active_ds()
+		//variable label_item = whichlistitem(datasource,labels)+1
+		variable label_item = 1
+		prompt label_item, "CCN Data source: ", popup, labels
+		DoPrompt "Select  CCN data source", label_item
+		if (V_flag)
+			print "user canceled!"
+			return 0
+		endif
+		ccn_datasource = stringfromlist(label_item-1,labels)
+	endif
+	string ccn_datasource_path = db_get_path_by_label(ccn_datasource)
+	string ccn_datasource_dims = db_get_dims_by_label(ccn_datasource)
+//	
+//	print "App: ", APP_SIGNATURE
+//	print "	DB: ", db_get_active_db()
+//	print "		Dataset: ", dataset
+//	print "			Data: ", ccn_datasource_path
+//	
+//	wave ccn_data = $ccn_datasource_path
+//
+//	string cdf = db_goto_datasource(ccn_datasource)
+//	wave ccn_avg = :average_ccn:data_avg
+//	wave ccn_sd = :average_ccn:data_sd
+//	setdatafolder cdf
+
+
+	if (ParamIsDefault(sizing_datasource))
+		labels = db_get_datasource_par_list("LABEL")
+		//datasource = db_get_active_ds()
+		//variable label_item = whichlistitem(datasource,labels)+1
+		label_item = 1
+		prompt label_item, "Sizing Data source: ", popup, labels
+		DoPrompt "Select  Sizing data source", label_item
+		if (V_flag)
+			print "user canceled!"
+			return 0
+		endif
+		sizing_datasource = stringfromlist(label_item-1,labels)
+//		print "sizing_datasource(label) = ", sizing_datasource
+	endif
+	string sizing_datasource_path = db_get_path_by_label(sizing_datasource)
+	string sizing_datasource_dims = db_get_dims_by_label(sizing_datasource)
+//	
+//	wave sizing_data = $sizing_datasource_path
+
+//	string dt_name = db_get_srcdim__(datasource_dims, "DATETIME_AXIS")
+//	variable clean_up_dt = 0
+//	if(cmpstr(dt_name,"") == 0)
+//		// use wavescaling
+//		wave dt = acg_extract_dt(data)
+//		dt_name = nameofwave(dt)
+//		print "dt_name = ", dt_name
+//		clean_up_dt = 1			
+//	endif
+//	wave dt = $dt_name
+	
+	// sizing
+	variable is_2d = 0
+//	if (dimsize(sizing_data,1)) // 2d wave
+//		string dp_name = db_get_srcdim__(sizing_datasource_dims, "DP_AXIS")
+//		if (cmpstr(dp_name,"")==0)
+//			print "Dp axis not defined"
+//			return 0
+//		endif
+//		print "dp_name", dp_name
+//		
+//		//acg_avg_using_time_index_2d(avg_per_start, avg_per_stop, dt, dat, output_name)
+//		is_2d = 1
+//	else
+//		return 1 // needs to be a 2d wave
+//	endif
+//	wave dp = $dp_name
+//	// get averaged sizing data
+//	string tdf = db_goto_datasource(sizing_datasource)
+//	wave sizing_avg = :average:data_avg
+//	setdatafolder tdf
+	
+	// ccn
+	is_2d = 0
+	//if (dimsize(ccn_data,1)) // 2d wave
+	string ss_name = db_get_srcdim__(ccn_datasource_dims, "SS_AXIS")
+	if (cmpstr(ss_name,"")==0)
+		print "SS axis not defined"
+		return 0
+	endif
+//	print "ss_name", ss_name
+		
+//		//acg_avg_using_time_index_2d(avg_per_start, avg_per_stop, dt, dat, output_name)
+//		is_2d = 1
+//	else
+//		return 1 // needs to be a 2d wave
+//	endif
+	wave ss = $ss_name
+	
+	// needs average data to find kappa
+	//wave data_avg = $(db_get_app_data(datasource,"average"))
+	// check to see if data_avg is current by comparing modtimes
+	//wave dat_avg = $"data_avg"
+	
+	// get list of dataset ids
+	wave ids = db_get_ds_ids()
+	
+
+	// init app structure
+	db_goto_datasource(ccn_datasource)
+
+	// add meta - maybe add global STRUCT to define meta values
+	string RECREATE = "db_app_find_kappa(ccn_datasource=\""+ccn_datasource+"\",sizing_datasource=\""+sizing_datasource+"\",dataset=\""+dataset+"\")"
+	//db_app_update_meta__("RECREATE",APP_SIGNATURE,RECREATE)
+	//print db_app_get_meta__("RECREATE",APP_SIGNATURE)
+
+	// create app folder
+	setdatafolder $APP_SIGNATURE
+	setdatafolder $sizing_datasource
+	
+	string dp_crit_avg_name  = "dp_crit"+ratio_str+"_avg"
+	wave dp_crit_avg = $dp_crit_avg_name
+	string dp_crit_sd_name  = "dp_crit"+ratio_str+"_sd"
+	wave dp_crit_sd = $dp_crit_sd_name
+
+	string kappa_avg_name  = "kappa"+ratio_str+"_avg"
+	wave kappa_avg = $kappa_avg_name
+	string kappa_sd_name  = "kappa"+ratio_str+"_sd"
+	wave kappa_sd = $kappa_sd_name
+	
+	// markers: plus, circle, square, up tri, down tri, left tri, rt tri, h diamond, v diamond, fat diamond, h bowtie, v bowtie, star
+	string markers = "0;19;16;17;23;46;49;26;29;18;15;14;60;"
+	// blue = (1,12815,52428)
+	
+	string legend_txt =" Dataset: " + dataset
+	variable idi
+//	variable build_legend = new_plot
+	for (idi=0; idi<numpnts(ids); idi+=1)
+		if (new_plot)
+			display dp_crit_avg[idi][] vs ss
+			new_plot=0
+		else
+			appendtograph dp_crit_avg[idi][] vs ss
+		endif
+		
+		appendtograph/R kappa_avg[idi][] vs ss
+
+		// get wavenames for plots
+		string dp_name = dp_crit_avg_name
+		string kappa_name = kappa_avg_name
+		if (idi>0 || init_curve_cnt>0 ) // how to do this with appended plots
+			variable tr_num 
+			dp_name +="#"+num2str(init_curve_cnt+idi)
+			kappa_name +="#"+num2str(init_curve_cnt+idi)			
+		endif
+		
+		if (do_error_bars)
+			ErrorBars $dp_name Y,wave=(dp_crit_sd[idi][*],dp_crit_sd[idi][*])
+			ErrorBars $kappa_name Y,wave=(kappa_sd[idi][*],kappa_sd[idi][*])
+		endif
+		
+		// change dp to blue
+		ModifyGraph rgb($dp_name)=(1,12815,52428)
+		// change to line&marker and set marker based on dataset entry id
+		ModifyGraph mode($dp_name)=4,marker($dp_name)=str2num(stringfromlist(ids[idi], markers))
+		ModifyGraph mode($kappa_name)=4,marker($kappa_name)=str2num(stringfromlist(ids[idi], markers))
+
+		// build legend
+//		if (build_legend)
+		legend_txt += "\n\s("+dp_name+")"+db_get_ds_meta(ids[idi],"name")
+//		endif
+	endfor
+	
+	// axes and labels	
+	ModifyGraph axRGB(left)=(1,12815,52428),tlblRGB(left)=(1,12815,52428),alblRGB(left)=(1,12815,52428)
+	Label left "\K(1,12815,52428)Critical D\\Bp\\M (um)"
+	ModifyGraph axRGB(right)=(65535,0,0),tlblRGB(right)=(65535,0,0),alblRGB(right)=(65535,0,0)
+	Label right "\K(65535,0,0)Kappa"
+	Label bottom, "Supersatuation (%)"
+
+	if (cmpstr(add_labels,"true")==0)
+		Legend/C/N=traces/A=MC legend_txt
+	endif
+	
+	setdatafolder sdf
+End
+
+Function db_plot_average_ccn([datasource, dataset, add_to_current, error_bars, add_labels])
+	string datasource
+	string dataset
+	string add_to_current // Default: false
+	string error_bars // Default: false
+	string add_labels
+	
+	
+	string APP_SIGNATURE = "average_ccn"
+	string sdf = getdatafolder(1)
+
+	variable new_plot = 1
+	variable init_curve_cnt = 0
+	if (!ParamIsDefault(add_to_current) && cmpstr(add_to_current,"true")==0)
+		new_plot = 0
+		init_curve_cnt = itemsinlist(tracenamelist("",";",1+4))
+	endif
+
+	if (ParamIsDefault(add_labels))
+		add_labels = "false"
+	endif
+		
+	variable do_error_bars = 0
+	if (!ParamIsDefault(error_bars) && cmpstr(error_bars,"true")==0)
+		do_error_bars = 1
+	endif
+	
+	if (ParamIsDefault(dataset))
+		dataset = db_get_active_ds()
+		string dsets = db_ds_list()
+		variable list_item = whichlistitem(dataset,dsets)
+		if (list_item < 0)
+			list_item = 1
+		else
+			list_item  +=1
+		endif
+		
+		prompt list_item, "Dataset: ", popup, dsets
+		DoPrompt "Select dataset", list_item
+		if (V_flag)
+			print "user canceled!"
+			return 0
+		endif
+		dataset = stringfromlist(list_item-1,dsets)
+	endif
+	db_set_active_ds(name=dataset)
+
+	if (ParamIsDefault(datasource))
+		string labels = db_get_datasource_par_list("LABEL")
+		//datasource = db_get_active_ds()
+		//variable label_item = whichlistitem(datasource,labels)+1
+		variable label_item = 1
+		prompt label_item, "CCN Data source: ", popup, labels
+		DoPrompt "Select  CCN data source", label_item
+		if (V_flag)
+			print "user canceled!"
+			return 0
+		endif
+		datasource = stringfromlist(label_item-1,labels)
+	endif
+	string datasource_path = db_get_path_by_label(datasource)
+	string datasource_dims = db_get_dims_by_label(datasource)
+
+	
+	variable is_2d = 0
+	string ss_name = db_get_srcdim__(datasource_dims, "SS_AXIS")
+	if (cmpstr(ss_name,"")==0)
+		print "SS axis not defined"
+		return 0
+	endif
+	wave ss = $ss_name
+	
+	// get list of dataset ids
+	wave ids = db_get_ds_ids()
+	
+
+	// init app structure
+	db_goto_datasource(datasource)
+
+	// set to APP datafolder
+	setdatafolder $APP_SIGNATURE
+	
+	string data_avg_name  = "data_avg"
+	wave data_avg = $data_avg_name
+	string data_sd_name  = "data_sd"
+	wave data_sd = $data_sd_name
+	
+	// markers: plus, circle, square, up tri, down tri, left tri, rt tri, h diamond, v diamond, fat diamond, h bowtie, v bowtie, star
+	string markers = "0;19;16;17;23;46;49;26;29;18;15;14;60;"
+	// blue = (1,12815,52428)
+	
+	string legend_txt =" Dataset: " + dataset
+	variable idi
+//	variable build_legend = new_plot
+	for (idi=0; idi<numpnts(ids); idi+=1)
+		if (new_plot)
+			display data_avg[idi][] vs ss
+			new_plot=0
+		else
+			appendtograph data_avg[idi][] vs ss
+		endif
+		
+		// get wavenames for plots
+		string data_name = data_avg_name
+		if (idi>0 || init_curve_cnt>0 ) // how to do this with appended plots
+			data_name +="#"+num2str(init_curve_cnt+idi)
+		endif
+		
+		if (do_error_bars)
+			ErrorBars $data_name Y,wave=(data_sd[idi][*],data_sd[idi][*])
+		endif
+		
+//		// change dp to blue
+//		ModifyGraph rgb($data_name)=(1,12815,52428)
+		// change to line&marker and set marker based on dataset entry id
+		ModifyGraph mode($data_name)=4,marker($data_name)=str2num(stringfromlist(ids[idi], markers))
+
+		// build legend
+//		if (build_legend)
+		legend_txt += "\n\s("+data_name+")"+db_get_ds_meta(ids[idi],"name")
+//		endif
+	endfor
+	
+	// axes and labels	
+//	ModifyGraph axRGB(left)=(1,12815,52428),tlblRGB(left)=(1,12815,52428),alblRGB(left)=(1,12815,52428)
+	Label left "CCN (cm\S-3\M)"
+	Label bottom, "Supersatuation (%)"
+
+	if (cmpstr(add_labels,"true")==0)
+		Legend/C/N=traces/A=MC legend_txt
+	endif
+	
+	setdatafolder sdf
 End
 
 // QUICK AND DIRTY
@@ -3287,4 +4149,454 @@ Function dev_average_by_index_list(data,index_list,out_name)
 	endfor
 			
 	killwaves/Z tmp
+End
+
+Function db_do_calcs_fit_params(calc_fn, [datasource, dataset])
+	string calc_fn // "modal_frac",  
+	string datasource
+	string dataset
+	
+	string valid_calc_fn = "modal_frac;"
+	
+	if (whichlistitem(calc_fn,valid_calc_fn) < 0)
+		print "invalid calc_fn: ", calc_fn
+		return 0
+	endif
+	
+	string APP_SIGNATURE = "fit_size_dist"
+	string sdf = getdatafolder(1)
+	
+	if (ParamIsDefault(dataset))
+		dataset = db_get_active_ds()
+		string dsets = db_ds_list()
+		variable list_item = whichlistitem(dataset,dsets)
+		if (list_item < 0)
+			list_item = 1
+		else
+			list_item  +=1
+		endif
+		
+		prompt list_item, "Dataset: ", popup, dsets
+		DoPrompt "Select dataset", list_item
+		if (V_flag)
+			print "user canceled!"
+			return 0
+		endif
+		dataset = stringfromlist(list_item-1,dsets)
+	endif
+	db_set_active_ds(name=dataset)
+
+	if (ParamIsDefault(datasource))
+		string labels = db_get_datasource_par_list("LABEL")
+		//datasource = db_get_active_ds()
+		//variable label_item = whichlistitem(datasource,labels)+1
+		variable label_item = 1
+		prompt label_item, "Data source: ", popup, labels
+		DoPrompt "Select  data source", label_item
+		if (V_flag)
+			print "user canceled!"
+			return 0
+		endif
+		datasource = stringfromlist(label_item-1,labels)
+	endif
+	string datasource_path = db_get_path_by_label(datasource)
+	string datasource_dims = db_get_dims_by_label(datasource)
+
+	
+//	variable is_2d = 0
+//	string ss_name = db_get_srcdim__(datasource_dims, "SS_AXIS")
+//	if (cmpstr(ss_name,"")==0)
+//		print "SS axis not defined"
+//		return 0
+//	endif
+//	wave ss = $ss_name
+	
+	// get list of dataset ids
+	wave ids = db_get_ds_ids()
+	
+
+	// init app structure
+	db_goto_datasource(datasource)
+
+	// set to APP datafolder
+	setdatafolder $APP_SIGNATURE
+
+	wave fit_par = $"fit_params"
+
+	newdatafolder/o/s calcs
+	newdatafolder/o/s $calc_fn
+	
+	
+	// create standard waves
+	
+	variable nper = dimsize(fit_par,0)
+	
+	make/o/n=(nper)/T $"data_period_name"
+	wave/T name = $"data_period_name"
+	
+	make/o/n=(nper)/D $"data_period_start_dt"
+	wave start_dt = $"data_period_start_dt"
+
+	make/o/n=(nper)/D $"data_period_stop_dt"
+	wave stop_dt = $"data_period_stop_dt"
+
+	make/o/n=(nper) $"chi_squared"
+	wave chi_sq = $"chi_squared"
+
+	make/o/n=(nper) $"data_period_id"
+	wave per_id = $"data_period_id"
+	
+	variable i
+	for (i=0; i<nper; i+=1)
+
+		name = db_get_ds_meta(fit_par[i],"name")
+
+		wave entry = db_get_ds_entry(fit_par[i])
+		start_dt[i] = entry[1]
+		stop_dt[i] = entry[2]
+		chi_sq[i] = fit_par[i][10]
+		per_id [i] = fit_par[i][0]
+
+	endfor
+	
+	
+	
+	if (cmpstr(calc_fn, "modal_frac")==0) // calclute number fraction in each mode
+
+		make/o/n=(nper) $"ait_num_frac", $"accum_num_frac", $"ssa_num_frac", $"total_N"
+		wave ait_nf = $"ait_num_frac"
+		wave accum_nf = $"accum_num_frac"
+		wave ssa_nf = $"ssa_num_frac"
+		wave totN = $"total_N"
+
+		make/o/n=(nper) $"ait_sfc_frac", $"accum_sfc_frac", $"ssa_sfc_frac", $"total_S"
+		wave ait_sf = $"ait_sfc_frac"
+		wave accum_sf = $"accum_sfc_frac"
+		wave ssa_sf = $"ssa_sfc_frac"
+		wave totS = $"total_S"
+
+		make/o/n=(nper) $"ait_vol_frac", $"accum_vol_frac", $"ssa_vol_frac", $"total_V"
+		wave ait_vf = $"ait_vol_frac"
+		wave accum_vf = $"accum_vol_frac"
+		wave ssa_vf = $"ssa_vol_frac"
+		wave totV = $"total_V"
+		
+		totN = fit_par[p][1] + fit_par[p][4] + fit_par[p][7] 
+		totS = (4*pi*(fit_par[p][2])^2) * fit_par[p][1] + (4*pi*(fit_par[p][5])^2) * fit_par[p][4] + (4*pi*(fit_par[p][8])^2) * fit_par[p][7] 
+		totV = (4/3*pi*(fit_par[p][2])^3) * fit_par[p][1] + (4/3*pi*(fit_par[p][5])^3) * fit_par[p][4] + (4/3*pi*(fit_par[p][8])^3) * fit_par[p][7] 
+
+		ait_nf = fit_par[p][1] / totN[p]
+		accum_nf = fit_par[p][4] / totN[p]
+		ssa_nf = fit_par[p][7] / totN[p]
+
+		ait_sf = ((4*pi*(fit_par[p][2])^2) * fit_par[p][1])/ totS[p]
+		accum_sf = ((4*pi*(fit_par[p][5])^2) * fit_par[p][4]) / totS[p]
+		ssa_sf = ((4*pi*(fit_par[p][8])^2) * fit_par[p][7]) / totS[p]
+
+		ait_vf = ((4/3*pi*(fit_par[p][2])^3) * fit_par[p][1])/ totV[p]
+		accum_vf = ((4/3*pi*(fit_par[p][5])^3) * fit_par[p][4]) / totV[p]
+		ssa_vf = ((4/3*pi*(fit_par[p][8])^3) * fit_par[p][7]) / totV[p]
+
+	endif
+	
+//	string data_avg_name  = "data_avg"
+//	wave data_avg = $data_avg_name
+//	string data_sd_name  = "data_sd"
+//	wave data_sd = $data_sd_name
+//	
+//	// markers: plus, circle, square, up tri, down tri, left tri, rt tri, h diamond, v diamond, fat diamond, h bowtie, v bowtie, star
+//	string markers = "0;19;16;17;23;46;49;26;29;18;15;14;60;"
+//	// blue = (1,12815,52428)
+//	
+//	string legend_txt =" Dataset: " + dataset
+//	variable idi
+////	variable build_legend = new_plot
+//	for (idi=0; idi<numpnts(ids); idi+=1)
+//		if (new_plot)
+//			display data_avg[idi][] vs ss
+//			new_plot=0
+//		else
+//			appendtograph data_avg[idi][] vs ss
+//		endif
+//		
+//		// get wavenames for plots
+//		string data_name = data_avg_name
+//		if (idi>0 || init_curve_cnt>0 ) // how to do this with appended plots
+//			data_name +="#"+num2str(init_curve_cnt+idi)
+//		endif
+//		
+//		if (do_error_bars)
+//			ErrorBars $data_name Y,wave=(data_sd[idi][*],data_sd[idi][*])
+//		endif
+//		
+////		// change dp to blue
+////		ModifyGraph rgb($data_name)=(1,12815,52428)
+//		// change to line&marker and set marker based on dataset entry id
+//		ModifyGraph mode($data_name)=4,marker($data_name)=str2num(stringfromlist(ids[idi], markers))
+//
+//		// build legend
+////		if (build_legend)
+//		legend_txt += "\n\s("+data_name+")"+db_get_ds_meta(ids[idi],"name")
+////		endif
+//	endfor
+//	
+//	// axes and labels	
+////	ModifyGraph axRGB(left)=(1,12815,52428),tlblRGB(left)=(1,12815,52428),alblRGB(left)=(1,12815,52428)
+//	Label left "CCN (cm\S-3\M)"
+//	Label bottom, "Supersatuation (%)"
+//
+//	if (cmpstr(add_labels,"true")==0)
+//		Legend/C/N=traces/A=MC legend_txt
+//	endif
+	
+	setdatafolder sdf
+End
+
+Function db_plot_kappa_std([ccn_datasource, sizing_datasource, dataset, add_to_current, crit_ratio, error_bars, add_labels])
+	string ccn_datasource
+	string sizing_datasource
+	string dataset
+	string add_to_current // Default: false
+	string crit_ratio // "1" or "0.5" Default: "0.5"
+	string error_bars // Default: false
+	string add_labels
+	
+	
+	string APP_SIGNATURE = "kappa"
+	string sdf = getdatafolder(1)
+
+	variable new_plot = 1
+	variable init_curve_cnt = 0
+	if (!ParamIsDefault(add_to_current) && cmpstr(add_to_current,"true")==0)
+		new_plot = 0
+		init_curve_cnt = itemsinlist(tracenamelist("",";",1+4))/2
+	endif
+
+	if (ParamIsDefault(add_labels))
+		add_labels = "false"
+	endif
+	
+	string ratio_str = "_0_5"
+	if (!ParamIsDefault(crit_ratio) && cmpstr(crit_ratio,"1")==0)
+		ratio_str=""
+	endif
+	
+	variable do_error_bars = 0
+	if (!ParamIsDefault(error_bars) && cmpstr(error_bars,"true")==0)
+		do_error_bars = 1
+	endif
+	
+	if (ParamIsDefault(dataset))
+		dataset = db_get_active_ds()
+		string dsets = db_ds_list()
+		variable list_item = whichlistitem(dataset,dsets)
+		if (list_item < 0)
+			list_item = 1
+		else
+			list_item  +=1
+		endif
+		
+		prompt list_item, "Dataset: ", popup, dsets
+		DoPrompt "Select dataset", list_item
+		if (V_flag)
+			print "user canceled!"
+			return 0
+		endif
+		dataset = stringfromlist(list_item-1,dsets)
+	endif
+	db_set_active_ds(name=dataset)
+
+	if (ParamIsDefault(ccn_datasource))
+		string labels = db_get_datasource_par_list("LABEL")
+		//datasource = db_get_active_ds()
+		//variable label_item = whichlistitem(datasource,labels)+1
+		variable label_item = 1
+		prompt label_item, "CCN Data source: ", popup, labels
+		DoPrompt "Select  CCN data source", label_item
+		if (V_flag)
+			print "user canceled!"
+			return 0
+		endif
+		ccn_datasource = stringfromlist(label_item-1,labels)
+	endif
+	string ccn_datasource_path = db_get_path_by_label(ccn_datasource)
+	string ccn_datasource_dims = db_get_dims_by_label(ccn_datasource)
+//	
+//	print "App: ", APP_SIGNATURE
+//	print "	DB: ", db_get_active_db()
+//	print "		Dataset: ", dataset
+//	print "			Data: ", ccn_datasource_path
+//	
+//	wave ccn_data = $ccn_datasource_path
+//
+//	string cdf = db_goto_datasource(ccn_datasource)
+//	wave ccn_avg = :average_ccn:data_avg
+//	wave ccn_sd = :average_ccn:data_sd
+//	setdatafolder cdf
+
+
+	if (ParamIsDefault(sizing_datasource))
+		labels = db_get_datasource_par_list("LABEL")
+		//datasource = db_get_active_ds()
+		//variable label_item = whichlistitem(datasource,labels)+1
+		label_item = 1
+		prompt label_item, "Sizing Data source: ", popup, labels
+		DoPrompt "Select  Sizing data source", label_item
+		if (V_flag)
+			print "user canceled!"
+			return 0
+		endif
+		sizing_datasource = stringfromlist(label_item-1,labels)
+//		print "sizing_datasource(label) = ", sizing_datasource
+	endif
+	string sizing_datasource_path = db_get_path_by_label(sizing_datasource)
+	string sizing_datasource_dims = db_get_dims_by_label(sizing_datasource)
+//	
+//	wave sizing_data = $sizing_datasource_path
+
+//	string dt_name = db_get_srcdim__(datasource_dims, "DATETIME_AXIS")
+//	variable clean_up_dt = 0
+//	if(cmpstr(dt_name,"") == 0)
+//		// use wavescaling
+//		wave dt = acg_extract_dt(data)
+//		dt_name = nameofwave(dt)
+//		print "dt_name = ", dt_name
+//		clean_up_dt = 1			
+//	endif
+//	wave dt = $dt_name
+	
+	// sizing
+	variable is_2d = 0
+//	if (dimsize(sizing_data,1)) // 2d wave
+//		string dp_name = db_get_srcdim__(sizing_datasource_dims, "DP_AXIS")
+//		if (cmpstr(dp_name,"")==0)
+//			print "Dp axis not defined"
+//			return 0
+//		endif
+//		print "dp_name", dp_name
+//		
+//		//acg_avg_using_time_index_2d(avg_per_start, avg_per_stop, dt, dat, output_name)
+//		is_2d = 1
+//	else
+//		return 1 // needs to be a 2d wave
+//	endif
+//	wave dp = $dp_name
+//	// get averaged sizing data
+//	string tdf = db_goto_datasource(sizing_datasource)
+//	wave sizing_avg = :average:data_avg
+//	setdatafolder tdf
+	
+	// ccn
+	is_2d = 0
+	//if (dimsize(ccn_data,1)) // 2d wave
+	string ss_name = db_get_srcdim__(ccn_datasource_dims, "SS_AXIS")
+	if (cmpstr(ss_name,"")==0)
+		print "SS axis not defined"
+		return 0
+	endif
+//	print "ss_name", ss_name
+		
+//		//acg_avg_using_time_index_2d(avg_per_start, avg_per_stop, dt, dat, output_name)
+//		is_2d = 1
+//	else
+//		return 1 // needs to be a 2d wave
+//	endif
+	wave ss = $ss_name
+	
+	// needs average data to find kappa
+	//wave data_avg = $(db_get_app_data(datasource,"average"))
+	// check to see if data_avg is current by comparing modtimes
+	//wave dat_avg = $"data_avg"
+	
+	// get list of dataset ids
+	wave ids = db_get_ds_ids()
+	
+
+	// init app structure
+	db_goto_datasource(ccn_datasource)
+
+	// add meta - maybe add global STRUCT to define meta values
+	string RECREATE = "db_app_find_kappa(ccn_datasource=\""+ccn_datasource+"\",sizing_datasource=\""+sizing_datasource+"\",dataset=\""+dataset+"\")"
+	//db_app_update_meta__("RECREATE",APP_SIGNATURE,RECREATE)
+	//print db_app_get_meta__("RECREATE",APP_SIGNATURE)
+
+	// create app folder
+	setdatafolder $APP_SIGNATURE
+	setdatafolder $sizing_datasource
+	
+	string dp_crit_avg_name  = "dp_crit"+ratio_str+"_avg"
+	wave dp_crit_avg = $dp_crit_avg_name
+	string dp_crit_sd_name  = "dp_crit"+ratio_str+"_sd"
+	wave dp_crit_sd = $dp_crit_sd_name
+
+	string kappa_avg_name  = "kappa"+ratio_str+"_avg"
+	wave kappa_avg = $kappa_avg_name
+	string kappa_sd_name  = "kappa"+ratio_str+"_sd"
+	wave kappa_sd = $kappa_sd_name
+	
+	// markers: plus, circle, square, up tri, down tri, left tri, rt tri, h diamond, v diamond, fat diamond, h bowtie, v bowtie, star
+	string markers = "0;19;16;17;23;46;49;26;29;18;15;14;60;"
+	// blue = (1,12815,52428)
+	
+	
+	// generate standard plot
+	ccn_make_standard_kappa_plot()
+
+	
+	string legend_txt =" Dataset: " + dataset
+	variable idi
+//	variable build_legend = new_plot
+	for (idi=0; idi<numpnts(ids); idi+=1)
+//		if (new_plot)
+//			display dp_crit_avg[idi][] vs ss
+//			new_plot=0
+//		else
+//			appendtograph dp_crit_avg[idi][] vs ss
+//		endif
+		
+		appendtograph/R  ss vs dp_crit_avg[idi][]
+
+		// get wavenames for plots
+		string tr_name = nameofwave(ss)
+		string dp_name = dp_crit_avg_name
+		string kappa_name = kappa_avg_name
+		if (idi>0 || init_curve_cnt>0 ) // how to do this with appended plots
+			variable tr_num 
+			tr_name +="#"+num2str(init_curve_cnt+idi)
+			dp_name +="#"+num2str(init_curve_cnt+idi)
+			kappa_name +="#"+num2str(init_curve_cnt+idi)			
+		endif
+		
+		if (do_error_bars)
+			ErrorBars $tr_name X,wave=(dp_crit_sd[idi][*],dp_crit_sd[idi][*])
+//			ErrorBars $dp_name Y,wave=(dp_crit_sd[idi][*],dp_crit_sd[idi][*])
+//			ErrorBars $kappa_name Y,wave=(kappa_sd[idi][*],kappa_sd[idi][*])
+		endif
+		
+		// continue from here
+		
+		// change dp to blue
+		ModifyGraph rgb($tr_name)=(1,12815,52428)
+		// change to line&marker and set marker based on dataset entry id
+		ModifyGraph mode($tr_name)=4,marker($tr_name)=str2num(stringfromlist(ids[idi], markers))
+//		ModifyGraph mode($kappa_name)=4,marker($kappa_name)=str2num(stringfromlist(ids[idi], markers))
+
+		// build legend
+//		if (build_legend)
+		legend_txt += "\n\s("+tr_name+")"+db_get_ds_meta(ids[idi],"name")
+//		endif
+	endfor
+	
+	// axes and labels	
+//	ModifyGraph axRGB(left)=(1,12815,52428),tlblRGB(left)=(1,12815,52428),alblRGB(left)=(1,12815,52428)
+//	Label left "\K(1,12815,52428)Critical D\\Bp\\M (um)"
+//	ModifyGraph axRGB(right)=(65535,0,0),tlblRGB(right)=(65535,0,0),alblRGB(right)=(65535,0,0)
+//	Label right "\K(65535,0,0)Kappa"
+//	Label bottom, "Supersatuation (%)"
+
+	if (cmpstr(add_labels,"true")==0)
+		Legend/C/N=traces/A=MC legend_txt
+	endif
+	
+	setdatafolder sdf
 End

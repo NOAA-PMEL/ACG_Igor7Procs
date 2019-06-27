@@ -765,15 +765,70 @@ Function ccn_flag_is_set(flag_name,index)
 	string flag_name
 	variable index
 	
-	string sdf = ccn_goto_ccn_folder()
-	wave/T flags = ccn_flag_dev
-	variable result = 0
-	if(whichlistitem(flag_name,flags[index]) > -1)
-		result = 1
+	if (stringmatch(flag_name, "*[*") && stringmatch(flag_name, "*]"))
+		return ccn_flag_state_is_set(flag_name, index)
+	else
+		string sdf = ccn_goto_ccn_folder()
+		wave/T flags = ccn_flag_dev
+		variable result = 0
+		if(whichlistitem(flag_name,flags[index]) > -1)
+			// if flag_name contains "[" && "]"
+			result = 1
+		endif
+		setdatafolder sdf
+		return result
 	endif
-	setdatafolder sdf
-	return result
+End
 
+Function ccn_flag_state_is_set(flag_name, index)
+	string flag_name
+	variable index
+	
+	// parse flag_name
+	flag_name = replacestring("]", flag_name, "[")
+	string flag = stringfromlist(0, flag_name, "[")
+	string state = stringfromlist(1, flag_name, "[")
+
+	if (ccn_flag_is_set(flag, index))
+		wave/T def = ccn_get_config("flag")
+		string entry = ccn_get_entry(def,name=flag)
+		variable id = numberbykey("id",entry)
+
+		string states = ccn_get_state_list(entry)
+		variable state_col = whichlistitem(state, states)
+			
+		string sdf = ccn_goto_ccn_folder()
+//		wave ccn_dt = ccn_datetime
+		setdatafolder :run_config
+		wave flag_index = $("ccn_flag_"+num2str(id)+"_index")
+		if (numtype(flag_index[index][state_col] )== 0 && flag_index[index][state_col]>0)
+			setdatafolder sdf
+			return 1
+		endif
+		setdatafolder sdf	
+	endif
+	
+	return 0
+//			if (numberbykey("state_count",entry) > 1)
+//				string sdf = ccn_goto_ccn_folder()
+//				wave ccn_dt = ccn_datetime
+//				setdatafolder :run_config
+//				wave flag_index = $("ccn_flag_"+num2str(id)+"_index")
+//				variable row = binarysearch(ccn_dt,dt)
+//				variable statecol = 0
+//				variable col
+//				for (col=0; col<(numberbykey("state_count",entry)); col+=1)
+//					//print row, col, flag_index[row][col]
+//					if (numtype(flag_index[row][col]) == 0)
+//						statecol = col
+//						break
+//					endif
+//				endfor
+//				
+//				setdatafolder sdf
+//				wname += "f"+num2str(id)+"_"+num2str(statecol)
+//				flist = addlistitem(stringbykey("name",entry) + "[" + stringfromlist(statecol,state_list) + "]", flist, ";",Inf)
+	
 End
 
 // Use this function to handle special flags that have state (e.g., TH_DENUDER)
@@ -1251,6 +1306,7 @@ Function dev_mono_generate_ss_matrix([normalize])
 			string mat_sd_wname = ""
 			if (doNormalize)
 				mat_wname += fldr_prefix + ":"
+				mat_sd_wname += fldr_prefix + ":"
 			endif
 			mat_wname += par_name+"_st_"+num2str(st_id)+"_fl_"+num2str(fl_id)
 			mat_sd_wname += par_name+"_sd_st_"+num2str(st_id)+"_fl_"+num2str(fl_id)
@@ -3873,7 +3929,7 @@ Function dev_export_waves_using_filter(data_type,[sample_type_list,flag_list])
 	string flag_list
 	
 	if (cmpstr(data_type,"spectra")!=0 && cmpstr(data_type,"mono")!=0)
-		print "Bad data_type. Allowed types: spectrra or mono"
+		print "Bad data_type. Allowed types: spectra or mono"
 		return 0
 	endif
 		
@@ -3958,7 +4014,8 @@ Function dev_export_waves_using_filter(data_type,[sample_type_list,flag_list])
 			ratio = NaN
 
 			for (row=0; row<numpnts(all_cn); row+=1)
-				if (whichlistitem(flag,flags[row]) >= 0)
+				if (ccn_flag_is_set(flag, row))
+//				if (whichlistitem(flag,flags[row]) >= 0)
 					if (all_sample_types || cmpstr(types[row],type) == 0) 
 						cn[row] = all_cn[row]
 						ccn[row] = all_ccn[row]
@@ -4152,4 +4209,1055 @@ Function dev_export_waves_using_filter(data_type,[sample_type_list,flag_list])
 //	killwaves/Z ratio
 	setdatafolder sdf
 	//SetDataFolder dfr
+End
+
+
+
+// *** for now, it just finds ss_crit for all sample types and flags.
+// ** Function: ccn_mono_find_ss_crit **
+//
+//	Calculate critical SS values from mono cn/ccn ratios. Also find values for ratio+sd and ratio-sd values
+//
+//	Requires: standard dp_v_ss matrix of ratios and ratio_sd for sample types
+//
+//	usage: ccn_mono_find_ss_critsamp_types, normalized
+//		where:
+//			samp_types - string list of sample types (standard delimiter)
+// 			normalized - specified ss_crit calculated from normalized data or no (0=false, 1=true)
+//
+//	output:  ccn_crit waves for each samp/flag type where cols correspond to dp and rows:
+//		row 0: ss_crit value @ ccn_cn_rat avg
+//		row 1: ss_crit value @ ccn_cn_rat avg - sd (max range)
+//		row 2: ss_crit value @ ccn_cn_rat avg + sd (min range)
+//		row 3: ss_crit positive error bar (row 1 - row 0)
+//		row 3: ss_crit negative error bar (row 0 - row 2)
+// **
+//Function dev_mono_find_ss_crit([samp_type_list, flag_list,normalize])
+Function dev_mono_find_ss_crit([normalize])
+	//string samp_type_list // sample type list
+	//string flag_list // list of flags
+	string normalize // use normalized matrix
+	
+	string sdf = ccn_goto_ccn_folder()
+	setdatafolder :dp_v_ss
+
+	wave dp= ccn_mono_dp
+	wave ss = ccn_mono_ss
+	
+//	if (ParamIsDefault(samp_type_list))
+//		samp_type_list = ""
+//	endif
+
+//	if (ParamIsDefault(flag_list))
+//		flag_list = ""
+//	endif
+		
+	variable doNormalize = 0
+	string fldr_prefix = ""
+	if (!ParamIsDefault(normalize) && (cmpstr(normalize,"yes")==0 || cmpstr(normalize,"true")==0) )
+		//suffix=""
+		doNormalize = 1
+		fldr_prefix = ":normalize"
+	endif
+
+	if (doNormalize)
+		setdatafolder $fldr_prefix
+	endif
+	string dp_v_ss_sdf = getdataFolder(1)
+		
+	// find list of waves meeting criteria
+	string wlist = acg_get_wave_list(filter=("ccn_cn_ratio_st_*")) // get list of all param waves
+	string sdlist = replacestring("_st_",wlist,"_sd_st_",1)
+	//string sdlist = acg_get_wave_list(filter=(param+"_sd_st_*")) // get list of all sd waves
+	variable listi
+
+	if (doNormalize)
+		setdatafolder ::
+	endif
+	newdataFolder/o/s :ss_crit
+	if (doNormalize) 
+		newdatafolder/o/s :normalize
+	endif
+	string ss_crit_sdf = getdataFolder(1)
+
+	for (listi=0; listi<itemsinlist(wlist); listi+=1)
+		setdatafolder $dp_v_ss_sdf
+		wave ratio = $(stringfromlist(listi, wlist))
+		wave sd = $(stringfromlist(listi, sdlist))
+		
+		if (dimsize(ratio,0) <= 0)
+			continue
+		endif
+		
+		setdatafolder $ss_crit_sdf
+		string wn = replacestring("ccn_cn_ratio", stringfromlist(listi, wlist), "ss_crit")
+		make/o/n=(5,numpnts(dp)) $wn
+		wave ss_crit = $wn
+		
+		variable dpi
+		for (dpi=0; dpi<numpnts(dp); dpi+=1)
+		
+			make/o/n=(dimsize(ratio,0)) tmp_ratio
+			wave tmp_ratio = tmp_ratio
+			tmp_ratio = ratio[p][dpi]
+			
+			// find crit_ss for ratio
+			ss_crit[0][dpi] = dev_find_crit_ss_mono(ss,tmp_ratio,0.5)
+
+			// find crit_ss for ratio-sd
+			tmp_ratio = ratio[p][dpi]-sd[p][dpi]
+			ss_crit[1][dpi] = dev_find_crit_ss_mono(ss,tmp_ratio,0.5)
+
+			// find crit_ss for ratio+sd
+			tmp_ratio = ratio[p][dpi]+sd[p][dpi]
+			ss_crit[2][dpi] = dev_find_crit_ss_mono(ss,tmp_ratio,0.5)
+
+			// add error bar values for plotting
+			ss_crit[3][dpi] = abs(ss_crit[1][dpi] - ss_crit[0][dpi])
+			ss_crit[4][dpi] = abs(ss_crit[0][dpi] - ss_crit[2][dpi])
+			
+		endfor	 
+		
+		string rat_info = note(ratio)
+		rat_info = replacestringbykey("wavename",rat_info,wn)
+ 		note/k ss_crit
+ 		note ss_crit, rat_info
+	
+	endfor
+	
+	killwaves/Z tmp_ratio
+	setdatafolder sdf
+End	
+
+
+//Function dev_ccn_mono_find_ss_crit(samp_types,[normalize])
+//	string samp_types // list of sample types to use (does not have to be full list)
+//	string normalize
+//	
+//	string sdf = ccn_goto_ccn_folder()
+//	setdatafolder :dp_v_ss
+//
+//	variable doNormalize = 0
+//	if (!ParamIsDefault(normalize) && (cmpstr(normalize,"yes")==0 || cmpstr(normalize,"true")==0) )
+//		//suffix=""
+//		doNormalize = 1
+//	endif
+//	 
+
+//
+//
+//	variable sti
+//	for (sti=0; sti<itemsinlist(samp_types); sti+=1)
+//		string type = stringfromlist(sti,samp_types)
+//		
+//		if (doNormalize)
+//			setdatafolder $":normalize"
+//		endif
+//		if ( waveexists( $("ccn_cn_ratio_"+type)) && waveexists( $("ccn_cn_ratio_"+type)) ) //&& waveexists($("ccn_mono_ss")) && waveexists($("ccn_mono_dp")) ) 
+//			wave ratio = $("ccn_cn_ratio_"+type)
+//			wave sd = $("ccn_cn_ratio_sd_"+type)
+//			
+//			if (doNormalize)
+//				setdatafolder ::
+//			endif
+//			wave ss = ccn_mono_ss // is this always the name?
+//			wave dp = ccn_mono_dp // is this always the name?
+//			
+//			newdatafolder/o/s :ss_crit
+//			if (doNormalize)
+//				newdatafolder/o/s :normalize
+//			endif
+//			make/o/n=(3,numpnts(dp)) $("ss_crit_"+type) // rows: ratio, ratio-sd, ratio+sd; cols: dps
+//			wave ss_crit = $("ss_crit_"+type) 
+//			
+//			if (doNormalize)
+//				setdatafolder ::
+//			endif
+//			
+//			variable dpi
+//			for (dpi=0; dpi<numpnts(dp); dpi+=1)
+//			
+//				make/o/n=(dimsize(ratio,0)) tmp_ratio
+//				wave tmp_ratio = tmp_ratio
+//				tmp_ratio = ratio[p][dpi]
+//				
+//				// find crit_ss for ratio
+//				ss_crit[0][dpi] = ccn_find_crit_ss_mono(ss,tmp_ratio,0.5)
+//	
+//				// find crit_ss for ratio-sd
+//				tmp_ratio = ratio[p][dpi]-sd[p][dpi]
+//				ss_crit[1][dpi] = ccn_find_crit_ss_mono(ss,tmp_ratio,0.5)
+//	
+//				// find crit_ss for ratio+sd
+//				tmp_ratio = ratio[p][dpi]+sd[p][dpi]
+//				ss_crit[2][dpi] = ccn_find_crit_ss_mono(ss,tmp_ratio,0.5)
+//				
+//			endfor	 
+//			
+//			setdatafolder ::
+//		else
+//			if (doNormalize)
+//				setdatafolder ::
+//			endif
+//			print ("missing wave(s): " + type + " ... skipping")
+//		endif
+//		
+//	endfor
+//	
+//	killwaves/Z tmp_ratio
+//	setdatafolder sdf
+//	
+//End
+
+
+// ** Function: ccn_find_crit_ss_mono **
+//
+//	Worker funciton to find critical ss based on single ccn/cn ratio curve. Uses spline style fit to find 
+//		where function crosses threshhold
+//
+//	usage: ccn_find_crit_ss_mono(ss,ratio,threshhold)
+//		where:
+//			ss - wave of supersatuations
+// 			ratio - wave of ccn/cn ratios
+//			threshhold - point at which to find critical supersaturation (float)
+//
+//	returns: ss_crit value (float)
+// **
+Function dev_find_crit_ss_mono(ss,ratio,threshhold)
+	wave ss
+	wave ratio
+	variable threshhold
+	
+	variable upper_ss, lower_ss
+	variable upper_ratio, lower_ratio
+	variable th_crossed = 0
+	
+	lower_ss = ss[0]
+	lower_ratio = ratio[0]
+	if (lower_ratio > threshhold) 
+		return NaN
+	endif
+	
+	variable i
+	for (i=1; i<numpnts(ss); i+=1)
+
+		if (numtype(ratio[i])==0)
+			if (ratio[i] > threshhold)
+				upper_ss = ss[i]
+				upper_ratio = ratio[i]
+				th_crossed = 1
+				break
+			else
+				lower_ss = ss[i]
+				lower_ratio = ratio[i]
+			endif
+		endif
+
+	endfor
+	
+	if (!th_crossed)
+		return NaN
+	endif
+	
+	// find crit_ss for found limits
+	make/o/n=2 tmp_rat = {lower_ratio,upper_ratio}
+	wave tmp_rat = tmp_rat
+					
+	variable index = binarysearchinterp(tmp_rat,threshhold)
+	variable crit_ss = lower_ss + ( (upper_ss-lower_ss)*index)
+	
+	killwaves/Z tmp_rat
+	
+	return crit_ss			
+	
+	
+End
+
+
+// ** Function: ccn_mono_plot_kappa **
+//
+//	Plot kappa values against diameter
+//
+//	Requires: kappa (mono) values as calculated by ccn_mono_find_kappa
+//
+//	usage: ccn_mono_plot_kappa(samp_types, normalized, use_error_bars)
+//		where:
+//			samp_types - string list of sample types (standard delimiter)
+// 			normalized - specified ss_crit calculated from normalized data or no (0=false, 1=true)
+//			use_error_bars - plot the upper and lower limits of kappa (0=false, 1=true)
+// **
+Function dev_mono_plot_ss_crit([sample_type_list,flag_list, normalize, error_bars, ranges, dp_range_list])
+	string sample_type_list
+	string flag_list
+	string normalize
+	string error_bars
+	string ranges
+	string dp_range_list // should look like this: dp_range="0;1" which are the index values for the first and last dp to plot as a string list
+
+	variable doNormalize = 0
+	if (!ParamIsDefault(normalize))
+		if (cmpstr(normalize,"true")==0 || cmpstr(normalize,"yes")==0)
+			doNormalize = 1
+		endif
+	endif
+
+	variable use_error_bars = 0
+	if (!ParamIsDefault(error_bars) && (cmpstr(error_bars,"yes")==0 || cmpstr(error_bars,"true")==0) )
+		//suffix=""
+		use_error_bars = 1
+	endif
+
+	variable use_ranges = 0
+	if (!ParamIsDefault(ranges) && (cmpstr(ranges,"yes")==0 || cmpstr(ranges,"true")==0) )
+		//suffix=""
+		use_ranges = 1
+	endif
+	 
+	 // can only select 1, default to error bars if both
+	 if (use_error_bars && use_ranges)
+	 	use_ranges = 0
+	 endif
+
+	if (ParamIsDefault(sample_type_list))
+		sample_type_list = ccn_get_samp_type_list_dev(ignore_defaults="true")
+	endif
+
+	variable req_all_flags = 1
+	if (ParamIsDefault(flag_list))
+		flag_list = "*"
+		req_all_flags=0
+	endif
+	
+	string sdf = ccn_goto_ccn_folder()
+	setdatafolder :dp_v_ss
+
+	wave dp= ccn_mono_dp
+	string dp_list = acg_get_wave_as_list(dp)
+
+	if (ParamIsDefault(dp_range_list) )
+		dp_range_list = "0;"+num2str(numpnts(dp)-1)
+	endif
+	make/o/n=2 dp_range_w
+	wave dp_range = dp_range_w
+	dp_range[0] = str2num(stringfromlist(0,dp_range_list))
+	dp_range[1] = str2num(stringfromlist(1,dp_range_list))
+
+	setdatafolder :ss_crit
+	if (doNormalize)
+		setdatafolder ":normalize"
+	endif
+
+	make/o/n=(3,6) rgb_values
+	wave colors = rgb_values // light gray, red, blue, green, orange, black
+	colors = { {62720,0,3840}, {0,15872,65280}, {0,39168,0}, {65280,43520,0}, {0,0,0}, {39168,39168,39168} }
+	
+	make/o/n=6 marker_values
+	wave mrk = marker_values // asterisk, circle, square, triangle(up), hourglass triangle, 4pt star
+	mrk = {19,16,17,14,60, 2}
+
+	variable i
+	variable curve_cnt = 0
+
+	string legend_str = ""
+	string title = ""
+	
+	for (i=0; i<itemsinlist(sample_type_list); i+=1)
+		string sample_type = stringfromlist(i,sample_type_list)
+		string crit_list = ccn_find_wavelist_by_par(require_all=req_all_flags,sample_type=sample_type,flag_list=flag_list,filter="ss_crit_st_*")
+		
+		variable listi
+		for (listi=0; listi<itemsinlist(crit_list); listi+=1)
+			string wname = stringfromlist(listi,crit_list)
+			wave ss_crit = $wname
+
+			if (waveexists($wname)) 
+			
+//				if (doNormalize)
+//					setdatafolder $":normalize"
+//				endif
+			
+				wave w = $wname
+				string meta = note(w)
+				
+				string fl_list = ccn_convert_list_from_map(stringbykey("flag_list",meta))
+				if (cmpstr(";",fl_list[strlen(fl_list)-1]) == 0)
+					fl_list = fl_list[0,strlen(fl_list)-2]
+				endif
+
+				if (curve_cnt ==0)
+					display ss_crit[0][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+					if (use_ranges)
+						appendtograph ss_crit[1][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+						appendtograph ss_crit[2][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+					endif
+				else
+					appendtograph ss_crit[0][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+					if (use_ranges)
+						appendtograph ss_crit[1][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+						appendtograph ss_crit[2][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+					endif
+				endif
+
+				if (use_error_bars)
+					ErrorBars $wname Y, wave=(ss_crit[3][dp_range[0],dp_range[1]] ,ss_crit[4][dp_range[0],dp_range[1]] )
+				endif
+				
+				curve_cnt +=1
+			
+			
+//				variable par_index = -1
+//				variable valid_trace = 0
+//				if (curve_cnt == 0)
+//					valid_trace = 0
+//					if (use_dp)
+//						par_index = whichlistitem(num2str(dp),dp_list) 
+//						if (par_index >= 0)
+//							display w[][par_index] vs x_axis
+//							valid_trace = 1
+//						endif
+//					else
+//						par_index = whichlistitem(num2str(ss),ss_list) 
+//						if (par_index >= 0)
+//							display w[par_index][] vs x_axis
+//							valid_trace = 1
+//						endif
+//					endif
+//
+//					if (!valid_trace)
+//						continue
+//					endif				
+//
+//					legend_str += "\s(#"+num2str(curve_cnt)+") " + stringbykey("sample_type",meta) + " ("+fl_list+")"			
+//
+//				else
+//					valid_trace = 0
+//					if (use_dp)
+//						par_index = whichlistitem(num2str(dp),dp_list) 
+//						if (par_index >= 0)
+//							AppendToGraph w[][par_index] vs x_axis
+//							valid_trace = 1
+//						endif
+//					else
+//						par_index = whichlistitem(num2str(ss),ss_list) 
+//						if (par_index >= 0)
+//							AppendToGraph w[par_index][] vs x_axis
+//							valid_trace = 1
+//						endif
+//					endif
+//
+//					if (!valid_trace)
+//						continue
+//					endif				
+//
+//					legend_str += "\r\s(#"+num2str(curve_cnt)+") " + stringbykey("sample_type",meta) + " ("+fl_list+")"
+//
+//				endif
+//				DelayUpdate
+//				ModifyGraph mode=4,rgb($wname)=(colors[0][curve_cnt],colors[1][curve_cnt],colors[2][curve_cnt])
+//				ModifyGraph marker($wname)=mrk[curve_cnt]
+//				SetAxis left 0,1
+//				ModifyGraph grid(left)=1
+//				ModifyGraph grid=1
+//				ModifyGraph gaps($wname)=0
+//				//Legend/C/N=text0/H={0,10,10}/A=LT
+//				Label left "CCN/CN Ratio"
+//				if (use_dp)
+//					Label bottom "SS (%)"
+//					title = "D\\Bp\\M = " + num2str(dp) + "nm"
+//				else
+//					Label bottom "D\\Bp\\M (nm)"
+//					title = "SS = " + num2str(ss) + "%"
+//				endif
+//				ErrorBars $wname Y,wave=(w_sd[*],w_sd[*])
+//				
+//				DoUpdate		
+				curve_cnt+=1
+			endif
+		endfor
+	endfor		
+	
+	
+//	if (doNormalize)
+//		title += " (normalized)"
+//	endif
+//	TextBox/C/N=text1/H={0,10,10} title
+//	Legend/C/N=text0/H={0,10,10}/A=LT legend_str
+//	DoUpdate
+
+	setdatafolder sdf
+
+	 
+//	variable sti
+////	for (sti=0; sti<itemsinlist(samp_types); sti+=1)
+//	for (sti=0; sti<10; sti+=1)
+//		string type = stringfromlist(sti,samp_types)
+//		
+//		if ( waveexists($(":ss_crit"+normalize_fld+":ss_crit_"+type)) && waveexists($("ccn_mono_dp")) ) 
+//			wave dp = ccn_mono_dp // is this always the name?
+//			
+//			wave ss_crit = $(":ss_crit"+normalize_fld+":ss_crit_"+type)
+//
+//			string ss_crit_wn = "ss_crit_"+type
+//			
+//			if (sti ==0)
+//				display ss_crit[0][] vs dp
+//				if (use_error_bars)
+//					appendtograph ss_crit[1][] vs dp
+//					appendtograph ss_crit[2][] vs dp
+//				endif
+//			else
+//				appendtograph ss_crit[0][] vs dp
+//				if (use_error_bars)
+//					appendtograph ss_crit[1][] vs dp
+//					appendtograph ss_crit[2][] vs dp
+//				endif
+//			endif
+//			
+//							
+//		else
+//			print ("missing wave(s): " + type + " ... skipping")
+//		endif
+//		
+//	endfor
+//	
+//	setdatafolder sdf
+
+End
+
+
+// ** Function: ccn_mono_find_kappa **
+//
+//	Calculate kappa values from mono ccn data. 
+//
+//	Requires: Critical SS values as generated by ccn_mono_find_ss_crit (or ccn_mono_find_ss_crit_wave)
+//
+//	usage: ccn_mono_find_kappa(samp_types, normalized
+//		where:
+//			samp_types - string list of sample types (standard delimiter)
+// 			normalized - specified ss_crit calculated from normalized data or no (0=false, 1=true)
+// **
+Function dev_mono_find_kappa([normalize])
+	//string samp_types // list of sample types to use (does not have to be full list)
+	string normalize // use normalized matrix
+	
+	string sdf = ccn_goto_ccn_folder()
+	setdatafolder :dp_v_ss
+
+	wave dp= ccn_mono_dp
+	//wave ss = ccn_mono_ss
+	
+//	if (ParamIsDefault(samp_type_list))
+//		samp_type_list = ""
+//	endif
+
+//	if (ParamIsDefault(flag_list))
+//		flag_list = ""
+//	endif
+		
+	variable doNormalize = 0
+	string fldr_prefix = ""
+	if (!ParamIsDefault(normalize) && (cmpstr(normalize,"yes")==0 || cmpstr(normalize,"true")==0) )
+		//suffix=""
+		doNormalize = 1
+		fldr_prefix = ":normalize"
+	endif
+
+	setdatafolder :ss_crit
+	if (doNormalize)
+		setdatafolder $fldr_prefix
+	endif
+	string ss_crit_sdf = getdataFolder(1)
+		
+	// find list of waves meeting criteria
+	string wlist = acg_get_wave_list(filter=("ss_crit_st_*")) // get list of all param waves
+	//string sdlist = replacestring("_st_",wlist,"_sd_st_",1)
+	//string sdlist = acg_get_wave_list(filter=(param+"_sd_st_*")) // get list of all sd waves
+	variable listi
+
+	if (doNormalize)
+		setdatafolder ::
+	endif
+	setdatafolder ::
+	newdataFolder/o/s :kappa_mono
+	if (doNormalize) 
+		newdatafolder/o/s :normalize
+	endif
+	string kappa_sdf = getdataFolder(1)
+
+	for (listi=0; listi<itemsinlist(wlist); listi+=1)
+		setdatafolder $ss_crit_sdf
+		wave ss_crit = $(stringfromlist(listi, wlist))
+		//wave sd = $(stringfromlist(listi, sdlist))
+
+		if (dimsize(ss_crit,0) <= 0)
+			continue
+		endif
+		
+
+		setdatafolder $kappa_sdf
+		string wn = replacestring("ss_crit", stringfromlist(listi, wlist), "kappa")
+		make/o/n=(5,numpnts(dp)) $wn
+		wave kappa = $wn
+		kappa = NaN
+		
+		variable dpi
+		for (dpi=0; dpi<numpnts(dp); dpi+=1)
+					
+			// find kappa for ss_crit
+			variable ss = ss_crit[0][dpi]
+			if (numtype(ss) == 0)
+				kappa[0][dpi] = ccn_find_kappa(ss, dp[dpi], 0.073)
+			endif
+
+			// find kappa for upper ss_crit
+			ss = ss_crit[1][dpi]
+			if (numtype(ss) == 0)
+				kappa[1][dpi] = ccn_find_kappa(ss, dp[dpi], 0.073)
+			endif
+
+			// find kappa for lower ss_crit
+			ss = ss_crit[2][dpi]
+			if (numtype(ss) == 0)
+				kappa[2][dpi] = ccn_find_kappa(ss, dp[dpi], 0.073)
+			endif
+
+			// add error bar values for plotting
+			kappa[3][dpi] = abs(kappa[1][dpi] - kappa[0][dpi])
+			kappa[4][dpi] = abs(kappa[0][dpi] - kappa[2][dpi])
+								
+		endfor	 
+
+		string kappa_info = note(ss_crit)
+		kappa_info = replacestringbykey("wavename",kappa_info,wn)
+ 		note/k kappa
+ 		note kappa, kappa_info
+
+	endfor
+	
+	setdatafolder sdf
+	
+End
+
+
+// ** Function: ccn_mono_plot_kappa **
+//
+//	Plot kappa values against diameter
+//
+//	Requires: kappa (mono) values as calculated by ccn_mono_find_kappa
+//
+//	usage: ccn_mono_plot_kappa(samp_types, normalized, use_error_bars)
+//		where:
+//			samp_types - string list of sample types (standard delimiter)
+// 			normalized - specified ss_crit calculated from normalized data or no (0=false, 1=true)
+//			use_error_bars - plot the upper and lower limits of kappa (0=false, 1=true)
+// **
+Function dev_mono_plot_kappa([sample_type_list,flag_list, normalize, error_bars, ranges, dp_range_list])
+	string sample_type_list
+	string flag_list
+	string normalize
+	string error_bars
+	string ranges
+	string dp_range_list // should look like this: dp_range="0;1" which are the index values for the first and last dp to plot as a string list
+
+	variable doNormalize = 0
+	if (!ParamIsDefault(normalize))
+		if (cmpstr(normalize,"true")==0 || cmpstr(normalize,"yes")==0)
+			doNormalize = 1
+		endif
+	endif
+
+	variable use_error_bars = 0
+	if (!ParamIsDefault(error_bars) && (cmpstr(error_bars,"yes")==0 || cmpstr(error_bars,"true")==0) )
+		//suffix=""
+		use_error_bars = 1
+	endif
+
+	variable use_ranges = 0
+	if (!ParamIsDefault(ranges) && (cmpstr(ranges,"yes")==0 || cmpstr(ranges,"true")==0) )
+		//suffix=""
+		use_ranges = 1
+	endif
+	 
+	 // can only select 1, default to error bars if both
+	 if (use_error_bars && use_ranges)
+	 	use_ranges = 0
+	 endif
+
+	if (ParamIsDefault(sample_type_list))
+		sample_type_list = ccn_get_samp_type_list_dev(ignore_defaults="true")
+	endif
+
+	variable req_all_flags = 1
+	if (ParamIsDefault(flag_list))
+		flag_list = "*"
+		req_all_flags=0
+	endif
+	
+	string sdf = ccn_goto_ccn_folder()
+	setdatafolder :dp_v_ss
+
+	wave dp= ccn_mono_dp
+	string dp_list = acg_get_wave_as_list(dp)
+
+	if (ParamIsDefault(dp_range_list) )
+		dp_range_list = "0;"+num2str(numpnts(dp)-1)
+	endif
+	make/o/n=2 dp_range_w
+	wave dp_range = dp_range_w
+	dp_range[0] = str2num(stringfromlist(0,dp_range_list))
+	dp_range[1] = str2num(stringfromlist(1,dp_range_list))
+
+	setdatafolder :kappa_mono
+	if (doNormalize)
+		setdatafolder ":normalize"
+	endif
+
+	make/o/n=(3,6) rgb_values
+	wave colors = rgb_values // light gray, red, blue, green, orange, black
+	colors = { {62720,0,3840}, {0,15872,65280}, {0,39168,0}, {65280,43520,0}, {0,0,0}, {39168,39168,39168} }
+	
+	make/o/n=6 marker_values
+	wave mrk = marker_values // asterisk, circle, square, triangle(up), hourglass triangle, 4pt star
+	mrk = {19,16,17,14,60, 2}
+
+	variable i
+	variable curve_cnt = 0
+
+	string legend_str = ""
+	string title = ""
+	
+	for (i=0; i<itemsinlist(sample_type_list); i+=1)
+		string sample_type = stringfromlist(i,sample_type_list)
+		string kappa_list = ccn_find_wavelist_by_par(require_all=req_all_flags,sample_type=sample_type,flag_list=flag_list,filter="kappa_st_*")
+		
+		variable listi
+		for (listi=0; listi<itemsinlist(kappa_list); listi+=1)
+			string wname = stringfromlist(listi,kappa_list)
+			wave kappa = $wname
+
+			if (waveexists($wname)) 
+			
+//				if (doNormalize)
+//					setdatafolder $":normalize"
+//				endif
+			
+				wave w = $wname
+				string meta = note(w)
+				
+				string fl_list = ccn_convert_list_from_map(stringbykey("flag_list",meta))
+				if (cmpstr(";",fl_list[strlen(fl_list)-1]) == 0)
+					fl_list = fl_list[0,strlen(fl_list)-2]
+				endif
+
+				if (curve_cnt ==0)
+					display kappa[0][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+					if (use_ranges)
+						appendtograph kappa[1][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+						appendtograph kappa[2][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+					endif
+				else
+					appendtograph kappa[0][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+					if (use_ranges)
+						appendtograph kappa[1][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+						appendtograph kappa[2][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+					endif
+				endif
+
+				if (use_error_bars)
+					ErrorBars $wname Y, wave=(kappa[3][dp_range[0],dp_range[1]] ,kappa[4][dp_range[0],dp_range[1]] )
+				endif
+				
+				curve_cnt +=1
+			
+			
+//				variable par_index = -1
+//				variable valid_trace = 0
+//				if (curve_cnt == 0)
+//					valid_trace = 0
+//					if (use_dp)
+//						par_index = whichlistitem(num2str(dp),dp_list) 
+//						if (par_index >= 0)
+//							display w[][par_index] vs x_axis
+//							valid_trace = 1
+//						endif
+//					else
+//						par_index = whichlistitem(num2str(ss),ss_list) 
+//						if (par_index >= 0)
+//							display w[par_index][] vs x_axis
+//							valid_trace = 1
+//						endif
+//					endif
+//
+//					if (!valid_trace)
+//						continue
+//					endif				
+//
+//					legend_str += "\s(#"+num2str(curve_cnt)+") " + stringbykey("sample_type",meta) + " ("+fl_list+")"			
+//
+//				else
+//					valid_trace = 0
+//					if (use_dp)
+//						par_index = whichlistitem(num2str(dp),dp_list) 
+//						if (par_index >= 0)
+//							AppendToGraph w[][par_index] vs x_axis
+//							valid_trace = 1
+//						endif
+//					else
+//						par_index = whichlistitem(num2str(ss),ss_list) 
+//						if (par_index >= 0)
+//							AppendToGraph w[par_index][] vs x_axis
+//							valid_trace = 1
+//						endif
+//					endif
+//
+//					if (!valid_trace)
+//						continue
+//					endif				
+//
+//					legend_str += "\r\s(#"+num2str(curve_cnt)+") " + stringbykey("sample_type",meta) + " ("+fl_list+")"
+//
+//				endif
+//				DelayUpdate
+//				ModifyGraph mode=4,rgb($wname)=(colors[0][curve_cnt],colors[1][curve_cnt],colors[2][curve_cnt])
+//				ModifyGraph marker($wname)=mrk[curve_cnt]
+//				SetAxis left 0,1
+//				ModifyGraph grid(left)=1
+//				ModifyGraph grid=1
+//				ModifyGraph gaps($wname)=0
+//				//Legend/C/N=text0/H={0,10,10}/A=LT
+//				Label left "CCN/CN Ratio"
+//				if (use_dp)
+//					Label bottom "SS (%)"
+//					title = "D\\Bp\\M = " + num2str(dp) + "nm"
+//				else
+//					Label bottom "D\\Bp\\M (nm)"
+//					title = "SS = " + num2str(ss) + "%"
+//				endif
+//				ErrorBars $wname Y,wave=(w_sd[*],w_sd[*])
+//				
+//				DoUpdate		
+				curve_cnt+=1
+			endif
+		endfor
+	endfor		
+	
+	
+//	if (doNormalize)
+//		title += " (normalized)"
+//	endif
+//	TextBox/C/N=text1/H={0,10,10} title
+//	Legend/C/N=text0/H={0,10,10}/A=LT legend_str
+//	DoUpdate
+
+	setdatafolder sdf
+
+End
+
+// ** Function: ccn_mono_plot_kappa **
+//
+//	Plot kappa values against diameter
+//
+//	Requires: kappa (mono) values as calculated by ccn_mono_find_kappa
+//
+//	usage: ccn_mono_plot_kappa(samp_types, normalized, use_error_bars)
+//		where:
+//			samp_types - string list of sample types (standard delimiter)
+// 			normalized - specified ss_crit calculated from normalized data or no (0=false, 1=true)
+//			use_error_bars - plot the upper and lower limits of kappa (0=false, 1=true)
+// **
+Function dev_mono_plot_kappa_std([sample_type_list,flag_list, error_bars, normalize, dp_range_list])
+	string sample_type_list
+	string flag_list
+	string error_bars
+	string normalize
+	string dp_range_list // should look like this: dp_range="0;1" which are the index values for the first and last dp to plot as a string list
+
+	variable doNormalize = 0
+	if (!ParamIsDefault(normalize))
+		if (cmpstr(normalize,"true")==0 || cmpstr(normalize,"yes")==0)
+			doNormalize = 1
+		endif
+	endif
+
+	variable use_error_bars = 0
+	if (!ParamIsDefault(error_bars) && (cmpstr(error_bars,"yes")==0 || cmpstr(error_bars,"true")==0) )
+		//suffix=""
+		use_error_bars = 1
+	endif
+
+
+	if (ParamIsDefault(sample_type_list))
+		sample_type_list = ccn_get_samp_type_list_dev(ignore_defaults="true")
+	endif
+
+	variable req_all_flags = 1
+	if (ParamIsDefault(flag_list))
+		flag_list = "*"
+		req_all_flags=0
+	endif
+	
+	string sdf = ccn_goto_ccn_folder()
+	setdatafolder :dp_v_ss
+
+	wave dp_nm= ccn_mono_dp
+	duplicate/o dp_nm ccn_mono_dp_um
+	wave dp = ccn_mono_dp_um
+	dp /= 1000
+	
+	//string dp_list = acg_get_wave_as_list(dp)
+
+	if (ParamIsDefault(dp_range_list) )
+		dp_range_list = "0;"+num2str(numpnts(dp)-1)
+	endif
+	make/o/n=2 dp_range_w
+	wave dp_range = dp_range_w
+	dp_range[0] = str2num(stringfromlist(0,dp_range_list))
+	dp_range[1] = str2num(stringfromlist(1,dp_range_list))
+
+	setdatafolder :ss_crit
+	if (doNormalize)
+		setdatafolder ":normalize"
+	endif
+
+	make/o/n=(3,6) rgb_values
+	wave colors = rgb_values // light gray, red, blue, green, orange, black
+	colors = { {62720,0,3840}, {0,15872,65280}, {0,39168,0}, {65280,43520,0}, {0,0,0}, {39168,39168,39168} }
+	
+	make/o/n=6 marker_values
+	wave mrk = marker_values // asterisk, circle, square, triangle(up), hourglass triangle, 4pt star
+	mrk = {19,16,17,14,60, 2}
+
+	variable i
+	variable curve_cnt = 0
+
+	string legend_str = ""
+	string title = "Kappa"
+	
+	// generate standard plot
+	ccn_make_standard_kappa_plot()
+	 	
+	for (i=0; i<itemsinlist(sample_type_list); i+=1)
+		string sample_type = stringfromlist(i,sample_type_list)
+		string crit_list = ccn_find_wavelist_by_par(require_all=req_all_flags,sample_type=sample_type,flag_list=flag_list,filter="ss_crit_st_*")
+		
+		variable listi
+		for (listi=0; listi<itemsinlist(crit_list); listi+=1)
+			string wname = stringfromlist(listi,crit_list)
+			wave ss_crit = $wname
+
+			if (waveexists($wname)) 
+			
+//				if (doNormalize)
+//					setdatafolder $":normalize"
+//				endif
+			
+				wave w = $wname
+				string meta = note(w)
+				
+				string fl_list = ccn_convert_list_from_map(stringbykey("flag_list",meta))
+				if (cmpstr(";",fl_list[strlen(fl_list)-1]) == 0)
+					fl_list = fl_list[0,strlen(fl_list)-2]
+				endif
+
+				appendtograph ss_crit[0][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+				if (use_error_bars)
+					ErrorBars $wname Y, wave=(ss_crit[3][dp_range[0],dp_range[1]] ,ss_crit[4][dp_range[0],dp_range[1]] )
+				endif
+				
+//				if (curve_cnt ==0)
+//					display ss_crit[0][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+//					if (use_error_bars)
+//						appendtograph ss_crit[1][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+//						appendtograph ss_crit[2][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+//					endif
+//				else
+//					appendtograph ss_crit[0][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+//					if (use_error_bars)
+//						appendtograph ss_crit[1][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+//						appendtograph ss_crit[2][dp_range[0],dp_range[1]] vs dp[dp_range[0],dp_range[1]]
+//					endif
+//				endif			
+			
+//				variable par_index = -1
+//				variable valid_trace = 0
+				if (curve_cnt == 0)
+//					valid_trace = 0
+//					if (use_dp)
+//						par_index = whichlistitem(num2str(dp),dp_list) 
+//						if (par_index >= 0)
+//							display w[][par_index] vs x_axis
+//							valid_trace = 1
+//						endif
+//					else
+//						par_index = whichlistitem(num2str(ss),ss_list) 
+//						if (par_index >= 0)
+//							display w[par_index][] vs x_axis
+//							valid_trace = 1
+//						endif
+//					endif
+
+//					if (!valid_trace)
+//						continue
+//					endif				
+
+					//legend_str += "\s(#"+num2str(curve_cnt)+") " + stringbykey("sample_type",meta) + " ("+fl_list+")"			
+					legend_str += "\s("+wname+") " + stringbykey("sample_type",meta) + " ("+fl_list+")"			
+//		\s(ss_crit_st_2_fl_0) ss_crit_st_2_fl_0[0][0,1]
+				else
+//					valid_trace = 0
+//					if (use_dp)
+//						par_index = whichlistitem(num2str(dp),dp_list) 
+//						if (par_index >= 0)
+//							AppendToGraph w[][par_index] vs x_axis
+//							valid_trace = 1
+//						endif
+//					else
+//						par_index = whichlistitem(num2str(ss),ss_list) 
+//						if (par_index >= 0)
+//							AppendToGraph w[par_index][] vs x_axis
+//							valid_trace = 1
+//						endif
+//					endif
+//
+//					if (!valid_trace)
+//						continue
+//					endif				
+//
+					legend_str += "\r\s("+wname+") " + stringbykey("sample_type",meta) + " ("+fl_list+")"
+
+				endif
+//				DelayUpdate
+//				ModifyGraph mode=4,rgb($wname)=(colors[0][curve_cnt],colors[1][curve_cnt],colors[2][curve_cnt])
+//				ModifyGraph marker($wname)=mrk[curve_cnt]
+//				SetAxis left 0,1
+//				ModifyGraph grid(left)=1
+//				ModifyGraph grid=1
+//				ModifyGraph gaps($wname)=0
+//				//Legend/C/N=text0/H={0,10,10}/A=LT
+//				Label left "CCN/CN Ratio"
+//				if (use_dp)
+//					Label bottom "SS (%)"
+//					title = "D\\Bp\\M = " + num2str(dp) + "nm"
+//				else
+//					Label bottom "D\\Bp\\M (nm)"
+//					title = "SS = " + num2str(ss) + "%"
+//				endif
+//				ErrorBars $wname Y,wave=(w_sd[*],w_sd[*])
+//				
+//				DoUpdate		
+				curve_cnt+=1
+			endif
+		endfor
+	endfor		
+	
+	
+	if (doNormalize)
+		title += " (normalized)"
+	endif
+	TextBox/C/N=text1/H={0,10,10} title
+	Legend/C/N=text0/H={0,10,10}/A=LT legend_str
+	DoUpdate
+
+	setdatafolder sdf	 
+
 End
